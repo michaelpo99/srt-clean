@@ -105,3 +105,56 @@ class CheckResult:
     profile: Profile
     cue_count: int = 0
     warnings: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class RuleMatch:
+    cue_indexes: list[int]
+    rule_id: str
+    match_type: str
+    severity: str
+    suggested_action: str
+    reason_zh: str
+    rule_order: int
+    before: str | None = None
+    after: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class CandidateAction:
+    cue_index: int
+    rule_id: str
+    match_type: str
+    severity: str
+    action: str
+    reason_zh: str
+    rule_order: int
+    before: str | None = None
+    after: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class ResolvedDecision:
+    decision_id: str
+    cue_index: int
+    start: str
+    end: str
+    text_sha256: str
+    rule_id: str
+    severity: str
+    suggested_action: str
+    action: str
+    reason_zh: str
+    text: str | None = None
+    before: str | None = None
+    after: str | None = None
+    secondary_rule_ids: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class PipelineResult:
+    cleaned_cues: list[Cue]
+    decisions: list[ResolvedDecision]

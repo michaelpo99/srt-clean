@@ -33,3 +33,12 @@ def test_cli_check_returns_success() -> None:
 
     assert result.returncode == 0
     assert "check ok:" in result.stdout
+
+
+def test_cli_requires_profile_for_clean_mode() -> None:
+    fixture = REPO_ROOT / "tests/fixtures/basic_multiline.input.srt"
+
+    result = run_cli(str(fixture))
+
+    assert result.returncode == 2
+    assert "--profile is required" in result.stderr

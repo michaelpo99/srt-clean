@@ -141,7 +141,7 @@ bash scripts/install.sh
 
 After installation, users should not need to manually activate the venv.
 
-## Planned CLI examples
+## CLI examples
 
 Clean Japanese ASR subtitles:
 
@@ -153,8 +153,6 @@ Generate report and decisions for review:
 
 ```bash
 srt-clean --mode report --profile jp-adult-soft sample.srt
-vi sample.clean-decisions.yml
-srt-clean --mode apply --decisions sample.clean-decisions.yml sample.srt
 ```
 
 Clean English ASR subtitles:
@@ -192,23 +190,27 @@ Current implemented scope:
 ```text
 Batch A
   Python package skeleton
-  minimal CLI help / --list-profiles / --check
+  CLI help / --list-profiles / --check
   SRT parser and writer
   strict profile loader
   deterministic normalization
+
+Batch B
+  rule engine
+  actions
+  conflict resolution
+
+Batch C
+  report mode
+  clean mode
+  .clean-report.txt output
+  .clean-decisions.yml output for report mode
+  .cleaned.srt output for clean mode
 ```
 
 Still pending:
 
 ```text
-Batch B
-  rule engine
-  actions
-
-Batch C
-  report mode
-  clean mode
-
 Batch D
   apply mode
   install scripts
