@@ -136,7 +136,8 @@ srt-clean/
 │   └── srt-clean
 ├── scripts/
 │   ├── install.sh
-│   └── uninstall.sh
+│   ├── uninstall.sh
+│   └── translate-with-ollama.sh
 ├── docs/
 │   ├── SDD-srt-clean.md
 │   └── SDD-ARCH-python-project-structure.md
@@ -290,12 +291,14 @@ pip install -e "$REPO_ROOT[dev]"
 
 6. 建立 `~/bin`。
 7. 寫入 `~/bin/srt-clean` wrapper。
-8. 檢查 `~/bin` 是否在 PATH。
-9. 執行 smoke test：
+8. 若 repo 提供獨立翻譯 helper，也寫入 `~/bin/translate-with-ollama` wrapper。
+9. 檢查 `~/bin` 是否在 PATH。
+10. 執行 smoke test：
 
 ```bash
 ~/bin/srt-clean --help
 ~/bin/srt-clean --list-profiles
+~/bin/translate-with-ollama --help
 ```
 
 10. 顯示後續使用方式。
@@ -325,9 +328,10 @@ bash scripts/install.sh --force
 `uninstall.sh` 應：
 
 1. 刪除 `~/bin/srt-clean`。
-2. 詢問是否刪除 `~/.venvs/srt-clean`。
-3. 不刪除使用者輸出的 SRT、report、decisions。
-4. 不刪除 repo。
+2. 若存在，也刪除 `~/bin/translate-with-ollama`。
+3. 詢問是否刪除 `~/.venvs/srt-clean`。
+4. 不刪除使用者輸出的 SRT、report、decisions。
+5. 不刪除 repo。
 
 支援：
 

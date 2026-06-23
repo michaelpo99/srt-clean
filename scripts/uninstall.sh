@@ -3,6 +3,7 @@ set -euo pipefail
 
 VENV_DIR="${HOME}/.venvs/srt-clean"
 WRAPPER_PATH="${HOME}/bin/srt-clean"
+TRANSLATE_WRAPPER_PATH="${HOME}/bin/translate-with-ollama"
 ASSUME_YES=0
 
 while [[ $# -gt 0 ]]; do
@@ -20,6 +21,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 rm -f "$WRAPPER_PATH"
+rm -f "$TRANSLATE_WRAPPER_PATH"
 
 if [[ -d "$VENV_DIR" ]]; then
   if [[ "$ASSUME_YES" -eq 1 ]]; then
@@ -33,3 +35,4 @@ if [[ -d "$VENV_DIR" ]]; then
 fi
 
 echo "uninstalled srt-clean wrapper from ${WRAPPER_PATH}"
+echo "uninstalled translate-with-ollama wrapper from ${TRANSLATE_WRAPPER_PATH}"

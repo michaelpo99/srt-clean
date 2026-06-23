@@ -7,6 +7,7 @@ PYTHON_BIN="${PYTHON_BIN:-python3}"
 VENV_DIR="${HOME}/.venvs/srt-clean"
 WRAPPER_DIR="${HOME}/bin"
 WRAPPER_PATH="${WRAPPER_DIR}/srt-clean"
+TRANSLATE_WRAPPER_PATH="${WRAPPER_DIR}/translate-with-ollama"
 INSTALL_TARGET="."
 FORCE=0
 
@@ -56,8 +57,16 @@ exec "\$HOME/.venvs/srt-clean/bin/srt-clean" "\$@"
 EOF
 chmod +x "$WRAPPER_PATH"
 
+cat >"$TRANSLATE_WRAPPER_PATH" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+exec bash "${REPO_ROOT}/scripts/translate-with-ollama.sh" "\$@"
+EOF
+chmod +x "$TRANSLATE_WRAPPER_PATH"
+
 "$WRAPPER_PATH" --help >/dev/null
 "$WRAPPER_PATH" --list-profiles >/dev/null
+"$TRANSLATE_WRAPPER_PATH" --help >/dev/null
 
 case ":${PATH}:" in
   *":${WRAPPER_DIR}:"*) ;;
@@ -68,3 +77,4 @@ esac
 
 echo "installed srt-clean to ${VENV_DIR}"
 echo "wrapper: ${WRAPPER_PATH}"
+echo "wrapper: ${TRANSLATE_WRAPPER_PATH}"

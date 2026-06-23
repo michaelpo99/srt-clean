@@ -16,6 +16,9 @@ SDD-ARCH-python-project-structure.md
 SDD-P0-implementation-plan.md
   P0 實作補強與 task plan。定義 P0 對模糊行為的最終決策、mode output matrix、hash 規則、normalization 順序、conflict resolution、repeated_phrase 演算法與分段實作計畫。
 
+SDD-CR-001-ollama-qwen3-translation-shell.md
+  未來 change request 規格。定義以 shell script 呼叫 `Ollama` 與 `qwen3:8b` 進行 SRT 翻譯的 scope、CLI 參數、輸出檔命名與驗收條件。
+
 SDD-TESTING.md
   測試策略。定義 tests / fixtures 位置、expected output 命名、agent 每個 task 必須測什麼，以及使用者需要看哪些結果。
 

@@ -21,11 +21,19 @@
 `srt-clean` 不會做：
 
 - 執行 ASR。
-- 翻譯字幕。
+- 由 `srt-clean` 主 CLI 直接翻譯字幕。
 - 讀取音訊或影片內容。
 - 用 LLM 判斷語意。
 - 改寫正常字幕內容以調整風格。
 - 在沒有明確規格的情況下修改 timecode。
+
+repo 另外提供一個獨立 shell helper：
+
+```text
+translate-with-ollama
+```
+
+它不屬於 `srt-clean` 主 CLI 的 P0 核心功能。
 
 ## 文件
 
@@ -62,7 +70,8 @@ srt-clean/
 │   └── srt-clean
 ├── scripts/
 │   ├── install.sh
-│   └── uninstall.sh
+│   ├── uninstall.sh
+│   └── translate-with-ollama.sh
 ├── docs/
 │   ├── README.md
 │   ├── SDD-srt-clean.md
@@ -131,6 +140,7 @@ ruff check .
 
 ```text
 ~/bin/srt-clean
+~/bin/translate-with-ollama
 ```
 
 安裝指令：
@@ -145,6 +155,12 @@ repo 驗證輔助指令：
 
 ```bash
 bash scripts/check.sh
+```
+
+若要使用翻譯 helper，另需先安裝 `Ollama` 並拉取模型：
+
+```bash
+ollama pull qwen3:8b
 ```
 
 ## CLI 範例
@@ -172,6 +188,18 @@ srt-clean --profile en-adult-soft --level conservative sample.en.srt
 
 ```bash
 srt-clean --profile en-translation-soft --mode report sample.translated.en.srt
+```
+
+使用 `Ollama` 進行字幕翻譯：
+
+```bash
+translate-with-ollama sample.srt zh-TW
+```
+
+這會產生：
+
+```text
+sample.zh-TW.srt
 ```
 
 ## 與其它工具的關係
