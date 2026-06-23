@@ -1,16 +1,18 @@
-# Codex 執行手冊
+# Codex / AI Agent 執行手冊
 
 最後更新：2026-06-23
 
 ## 1. 目的
 
-本文件是給使用者直接複製貼給 Codex 的執行手冊。
+本文件是給 Codex 或其它 AI agent 直接讀取的 execution runbook。
 
-使用者不需要記住 Python 細節，也不需要自己寫 pytest fixtures。Codex 必須讀規格、實作功能、建立測試、執行檢查、修到通過，再回報結果。
+它不是只給使用者複製貼上用的 prompt 文件。若 agent 能讀取 repo，應直接依本文件規劃、分批實作、建立測試、執行檢查、修到通過，再回報結果。
 
-## 2. Codex 必讀文件
+使用者也可以把本文件中的 batch 指令複製給 Codex；但主要定位是 agent-facing。
 
-每次 Codex 開工前都應讀：
+## 2. Agent 必讀文件
+
+每次開始實作前，agent 必須閱讀：
 
 ```text
 AGENTS.md
@@ -20,13 +22,35 @@ docs/SDD-ARCH-python-project-structure.md
 docs/SDD-srt-clean.md
 docs/SDD-P0-implementation-plan.md
 docs/SDD-TESTING.md
+docs/CODEX-RUNBOOK.md
 ```
 
 文件以繁體中文為主，但 CLI options、YAML keys、module names、rule types、actions、severity、file paths 與 test commands 必須保留英文 token。
 
-## 3. 最小人工介入、但穩定的策略
+## 3. 執行原則
 
-不要一次叫 Codex 做完 Task 1 到 Task 11。
+Agent 應以 batch 為單位實作，不要一次完成所有 P0 tasks。
+
+每個 batch 內可以自主完成該 batch 的所有 scope，不需要逐 task 詢問使用者。
+
+每個 batch 結束前必須執行：
+
+```bash
+pytest
+ruff check .
+```
+
+若 `scripts/check.sh` 已存在，另執行：
+
+```bash
+bash scripts/check.sh
+```
+
+如果檢查失敗，agent 必須先修正並重新執行。只有在所有檢查通過後，才可回報 batch 完成。
+
+## 4. 最小人工介入、但穩定的策略
+
+不要一次實作 Task 1 到 Task 11。
 
 建議分成三個 implementation batches，再加一個 install/docs batch：
 
@@ -54,23 +78,20 @@ Batch D: Task 9-11
 
 人工介入點只放在 batch 結束時。
 
-每個 batch 結束時，只看三件事：
+每個 batch 結束時，agent 必須回報：
 
 ```text
+變更了哪些檔案
+完成了哪些 tasks
 pytest 是否通過
 ruff check . 是否通過
-Codex 是否清楚列出完成內容與限制
+scripts/check.sh 是否通過，如果已存在
+已知限制
 ```
 
-若 Task 10 後已經有 `scripts/check.sh`，改看：
+## 5. 為什麼不一次跑完
 
-```bash
-bash scripts/check.sh
-```
-
-## 4. 為什麼不一次跑完
-
-一次跑完 Task 1-11 的風險：
+一次完成 Task 1-11 的風險：
 
 ```text
 parser 錯，後面的 rule tests 可能建立在錯資料上
@@ -82,13 +103,11 @@ apply mode 與 install script 會把問題混在一起，難以定位
 
 分 batch 的目的不是讓使用者懂 Python，而是避免錯誤堆疊。
 
-## 5. Batch A prompt
+## 6. Batch A 指令
 
-把下面整段丟給 Codex：
+Agent 應在 Batch A 實作下列內容。
 
 ```text
-請先閱讀 AGENTS.md、README.md、docs/SDD-DOCS-STYLE.md、docs/SDD-ARCH-python-project-structure.md、docs/SDD-srt-clean.md、docs/SDD-P0-implementation-plan.md、docs/SDD-TESTING.md。
-
 只實作 Batch A：Task 1 through Task 4。
 
 範圍：
@@ -106,7 +125,7 @@ apply mode 與 install script 會把問題混在一起，難以定位
 不要實作 rule application、clean mode、report mode、apply mode、install scripts 或 documentation pass，除非 Batch A 測試必要。
 
 請自行在 tests/fixtures/ 建立需要的小型 synthetic fixtures。
-不要要求我提供測試檔案。
+不要要求使用者提供測試檔案。
 不要使用真實商業字幕樣本。
 
 執行：
@@ -124,13 +143,11 @@ ruff check .
 5. 已知限制
 ```
 
-## 6. Batch B prompt
+## 7. Batch B 指令
 
-Batch A 通過後使用。
+Batch A 通過後，agent 才能執行 Batch B。
 
 ```text
-請先閱讀 AGENTS.md、README.md、docs/SDD-DOCS-STYLE.md、docs/SDD-ARCH-python-project-structure.md、docs/SDD-srt-clean.md、docs/SDD-P0-implementation-plan.md、docs/SDD-TESTING.md。
-
 只實作 Batch B：Task 5 and Task 6。
 
 範圍：
@@ -153,7 +170,7 @@ Batch A 通過後使用。
 不要實作 report mode、clean mode、apply mode、install scripts 或 documentation pass。
 
 請自行在 tests/fixtures/ 建立需要的小型 synthetic fixtures。
-不要要求我提供測試檔案。
+不要要求使用者提供測試檔案。
 不要使用真實商業字幕樣本。
 
 執行：
@@ -171,13 +188,11 @@ ruff check .
 5. 已知限制
 ```
 
-## 7. Batch C prompt
+## 8. Batch C 指令
 
-Batch B 通過後使用。
+Batch B 通過後，agent 才能執行 Batch C。
 
 ```text
-請先閱讀 AGENTS.md、README.md、docs/SDD-DOCS-STYLE.md、docs/SDD-ARCH-python-project-structure.md、docs/SDD-srt-clean.md、docs/SDD-P0-implementation-plan.md、docs/SDD-TESTING.md。
-
 只實作 Batch C：Task 7 and Task 8。
 
 範圍：
@@ -201,7 +216,7 @@ Batch B 通過後使用。
 不要實作 P0 不支援的 options：--in-place、--preview-output、--allow-stale-decisions、--include-review 或 profile auto detection。
 
 請自行在 tests/fixtures/ 建立需要的小型 synthetic fixtures。
-不要要求我提供測試檔案。
+不要要求使用者提供測試檔案。
 不要使用真實商業字幕樣本。
 
 執行：
@@ -221,13 +236,11 @@ ruff check .
 6. 已知限制
 ```
 
-## 8. Batch D prompt
+## 9. Batch D 指令
 
-Batch C 通過，且使用者對 clean mode 方向滿意後使用。
+Batch C 通過，且使用者對 clean mode 方向滿意後，agent 才能執行 Batch D。
 
 ```text
-請先閱讀 AGENTS.md、README.md、docs/SDD-DOCS-STYLE.md、docs/SDD-ARCH-python-project-structure.md、docs/SDD-srt-clean.md、docs/SDD-P0-implementation-plan.md、docs/SDD-TESTING.md。
-
 只實作 Batch D：Task 9 through Task 11。
 
 範圍：
@@ -247,7 +260,7 @@ Batch C 通過，且使用者對 clean mode 方向滿意後使用。
 不要實作 P0 不支援的 options，除非現有規格明確要求。
 
 請自行在 tests/fixtures/ 建立需要的小型 synthetic fixtures。
-不要要求我提供測試檔案。
+不要要求使用者提供測試檔案。
 不要使用真實商業字幕樣本。
 
 執行：
@@ -270,9 +283,9 @@ bash scripts/check.sh
 7. 已知限制
 ```
 
-## 9. 可選的快速方案
+## 10. 可選的快速方案
 
-若使用者想減少互動次數，可用兩段式：
+若使用者明確要求減少互動次數，可用兩段式：
 
 ```text
 Fast Batch 1: Tasks 1-6
@@ -281,9 +294,9 @@ Fast Batch 2: Tasks 7-11
 
 這比較快，但穩定性較低。
 
-除非使用者接受較高風險，不建議一次執行 Task 1-11。
+除非使用者明確接受較高風險，不建議一次執行 Task 1-11。
 
-## 10. Batch C 後的人工檢查
+## 11. Batch C 後的人工檢查
 
 Batch C 完成後，使用者可以用一個 repo 外的私人真實 SRT 測試：
 
@@ -304,7 +317,7 @@ report 看得懂
 
 不要 commit 私人真實 SRT samples。
 
-## 11. 成功定義
+## 12. 成功定義
 
 最小可用成功點是 Batch C 通過。
 
