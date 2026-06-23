@@ -51,3 +51,12 @@ def test_cli_apply_mode_requires_decisions() -> None:
 
     assert result.returncode == 2
     assert "--decisions is required" in result.stderr
+
+
+def test_cli_clean_mode_rejects_decisions_option() -> None:
+    fixture = REPO_ROOT / "tests/fixtures/basic_multiline.input.srt"
+
+    result = run_cli("--profile", "jp-adult-soft", "--decisions", "bad.yml", str(fixture))
+
+    assert result.returncode == 2
+    assert "--decisions is not supported in --mode clean" in result.stderr

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import hashlib
 from pathlib import Path
 
 from .models import Cue, ResolvedDecision
@@ -27,7 +28,9 @@ def build_report_text(
     total_cues: int,
     cleaned_cues: list[Cue],
     decisions: list[ResolvedDecision],
+    warnings: list[str] | None = None,
 ) -> str:
+    source_sha256 = hashlib.sha256(source_path.read_bytes()).hexdigest()
     removed = sum(1 for decision in decisions if decision.action == "remove")
     compressed = sum(1 for decision in decisions if decision.action == "compress")
     protected = sum(1 for decision in decisions if decision.severity == "protected")
@@ -41,6 +44,7 @@ def build_report_text(
     lines = [
         "srt-clean report",
         f"source={source_path.name}",
+        f"source_sha256={source_sha256}",
         f"profile={profile_name}",
         f"mode={mode}",
         f"level={level}",
@@ -54,8 +58,16 @@ def build_report_text(
         f"  review_cues={review}",
         f"  estimated_removed_ratio={removed_ratio:.2f}%",
         "",
+        "warnings:",
         "rule_summary:",
     ]
+    if warnings:
+        lines[lines.index("warnings:") + 1 : lines.index("rule_summary:")] = [
+            *(f"  {warning}" for warning in warnings),
+            "",
+        ]
+    else:
+        lines[lines.index("warnings:") + 1 : lines.index("rule_summary:")] = ["  none", ""]
     if rule_summary:
         for rule_id in sorted(rule_summary):
             parts = " ".join(
@@ -76,6 +88,7 @@ def build_report_text(
                     f"time={decision.start} --> {decision.end}",
                     f"rule={decision.rule_id}",
                     f"severity={decision.severity}",
+                    f"action={decision.action}",
                     f"text={decision.text}",
                     f"reason_zh={decision.reason_zh}",
                 ]
@@ -92,6 +105,7 @@ def build_report_text(
                     f"time={decision.start} --> {decision.end}",
                     f"rule={decision.rule_id}",
                     f"severity={decision.severity}",
+                    f"action={decision.action}",
                     f"before={decision.before}",
                     f"after={decision.after}",
                     f"reason_zh={decision.reason_zh}",
@@ -107,6 +121,7 @@ def build_report_text(
                     f"time={decision.start} --> {decision.end}",
                     f"rule={decision.rule_id}",
                     f"severity={decision.severity}",
+                    f"action={decision.action}",
                     f"text={decision.text}",
                     f"reason_zh={decision.reason_zh}",
                 ]
@@ -121,6 +136,7 @@ def build_report_text(
                     f"time={decision.start} --> {decision.end}",
                     f"rule={decision.rule_id}",
                     f"severity={decision.severity}",
+                    f"action={decision.action}",
                     f"text={decision.text}",
                     f"reason_zh={decision.reason_zh}",
                 ]
@@ -135,6 +151,7 @@ def build_report_text(
                     f"time={decision.start} --> {decision.end}",
                     f"rule={decision.rule_id}",
                     f"severity={decision.severity}",
+                    f"action={decision.action}",
                     f"text={decision.text}",
                     f"reason_zh={decision.reason_zh}",
                 ]

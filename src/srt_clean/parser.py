@@ -12,7 +12,7 @@ TIMECODE_RE = re.compile(
 )
 
 
-def parse_timestamp(value: str, *, line_number: int | None = None) -> int:
+def parse_timestamp(value: str, *, line_number: int | None = None) -> tuple[int, int]:
     match = TIMECODE_RE.match(value)
     if not match:
         raise SRTParseError("invalid timecode", line_number=line_number)
@@ -24,8 +24,8 @@ def parse_timestamp(value: str, *, line_number: int | None = None) -> int:
     end_ms = (
         ((parts["end_h"] * 60 + parts["end_m"]) * 60 + parts["end_s"]) * 1000 + parts["end_ms"]
     )
-    if end_ms < start_ms:
-        raise SRTParseError("end time is earlier than start time", line_number=line_number)
+    if end_ms <= start_ms:
+        raise SRTParseError("end time must be later than start time", line_number=line_number)
     return start_ms, end_ms
 
 

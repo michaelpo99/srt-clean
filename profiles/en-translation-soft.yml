@@ -22,19 +22,15 @@ levels:
   conservative:
     apply_severity:
       - safe
-      - review
   moderate:
     apply_severity:
       - safe
-      - review
   aggressive:
     apply_severity:
       - safe
-      - review
 
 protected:
-  text_regex:
-    - ".*"
+  text_regex: []
 
 lists: {}
 

@@ -87,7 +87,15 @@ def ensure_output_paths(paths: list[Path], *, force: bool) -> None:
             )
 
 
+def validate_option_compatibility(args: argparse.Namespace) -> None:
+    if args.mode == "report" and args.output:
+        raise CLIError("--output is not supported in --mode report")
+    if args.mode in {"clean", "report"} and args.decisions:
+        raise CLIError(f"--decisions is not supported in --mode {args.mode}")
+
+
 def run_pipeline(args: argparse.Namespace) -> int:
+    validate_option_compatibility(args)
     if args.mode != "apply" and not args.profile:
         available = ", ".join(list_builtin_profiles())
         raise CLIError(f"--profile is required for P0. Available profiles: {available}")
@@ -152,6 +160,7 @@ def run_pipeline(args: argparse.Namespace) -> int:
         total_cues=len(cues),
         cleaned_cues=result.cleaned_cues,
         decisions=result.decisions,
+        warnings=[],
     )
     report_path.write_text(report_text, encoding="utf-8")
 

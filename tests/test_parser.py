@@ -41,3 +41,13 @@ def test_parse_invalid_timecode_reports_line_number() -> None:
 
     assert "line 2" in str(excinfo.value)
     assert "invalid timecode" in str(excinfo.value)
+
+
+def test_parse_zero_duration_cue_is_rejected() -> None:
+    text = "1\n00:00:01,000 --> 00:00:01,000\nzero\n"
+
+    with pytest.raises(SRTParseError) as excinfo:
+        parse_srt_text(text)
+
+    assert "line 2" in str(excinfo.value)
+    assert "later than start time" in str(excinfo.value)
