@@ -137,6 +137,7 @@ def resolve_actions(
         remove_candidates = [candidate for candidate in auto_candidates if candidate.action == "remove"]
         compress_candidates = [candidate for candidate in auto_candidates if candidate.action == "compress"]
         report_candidates = [candidate for candidate in cue_candidates if candidate.action in {"report", "keep"}]
+        blocked_by_protected = protected and bool(remove_candidates)
 
         primary: CandidateAction | None = None
         if protected:
@@ -207,7 +208,7 @@ def resolve_actions(
                 before=primary.before or cue.text,
                 after=primary.after,
                 secondary_rule_ids=secondary_rule_ids,
-                metadata=primary.metadata.copy(),
+                metadata={**primary.metadata.copy(), "blocked_by_protected": blocked_by_protected},
             )
         )
         decision_counter += 1

@@ -126,6 +126,8 @@ def build_report_text(
                     f"reason_zh={decision.reason_zh}",
                 ]
             )
+            if decision.metadata.get("blocked_by_protected"):
+                lines.append("blocked_by_protected=true")
         elif decision.action == "keep":
             lines.extend(
                 [
