@@ -1,35 +1,35 @@
 # srt-clean
 
-`srt-clean` is a rule-based SRT subtitle cleaner for ASR output.
+`srt-clean` 是一支針對 ASR 輸出設計的規則式 SRT 字幕清理工具。
 
-It removes, compresses, or reports low-information, dense, repeated, or likely hallucinated subtitle cues while preserving meaningful short phrases and original timecodes.
+它會在保留有語意短句與原始 timecode 的前提下，移除、壓縮或報告低資訊、過度密集、重複或疑似幻覺的字幕 cue。
 
-The first target use case is cleaning Whisper / WhisperX `.srt` output where long-form audio, background noise, repeated non-semantic vocalizations, filler sounds, or ASR hallucinations create subtitles that are too dense or distracting.
+第一個目標使用情境是清理 Whisper / WhisperX 產生的 `.srt`，處理長音訊、背景噪音、重複非語義發聲、filler sound 或 ASR hallucination 造成的高密度干擾字幕。
 
-## Product boundary
+## 產品邊界
 
-`srt-clean` does:
+`srt-clean` 會做：
 
-- Parse `.srt` files.
-- Apply YAML-configured cleaning rules.
-- Preserve original input files by default.
-- Output cleaned SRT files.
-- Output human-readable reports.
-- Support review and partial application through decisions files.
-- Support Japanese and English cleaning profiles.
+- 解析 `.srt` 檔案。
+- 套用以 YAML 設定的清理規則。
+- 預設保留原始輸入檔。
+- 產生清理後的 SRT。
+- 產生人類可讀的 report。
+- 透過 decisions 檔支援 review 與部分套用。
+- 支援日文與英文清理 profile。
 
-`srt-clean` does not:
+`srt-clean` 不會做：
 
-- Run ASR.
-- Translate subtitles.
-- Read audio or video.
-- Use LLMs for semantic judgment.
-- Rewrite normal subtitle text for style.
-- Change timecodes unless a future explicit feature is specified.
+- 執行 ASR。
+- 翻譯字幕。
+- 讀取音訊或影片內容。
+- 用 LLM 判斷語意。
+- 改寫正常字幕內容以調整風格。
+- 在沒有明確規格的情況下修改 timecode。
 
-## Documentation
+## 文件
 
-Read these first:
+建議先讀：
 
 ```text
 docs/SDD-srt-clean.md
@@ -37,20 +37,20 @@ docs/SDD-ARCH-python-project-structure.md
 AGENTS.md
 ```
 
-Purpose of each document:
+各文件用途：
 
 ```text
 docs/SDD-srt-clean.md
-  Product behavior, rule engine, profiles, report format, decisions, parser behavior, tests, and exit codes.
+  產品行為、rule engine、profiles、report 格式、decisions、parser 行為、tests 與 exit codes。
 
 docs/SDD-ARCH-python-project-structure.md
-  Python package structure, venv strategy, install scripts, development workflow, and P0 implementation order.
+  Python package 結構、venv 策略、install scripts、開發流程與 P0 實作順序。
 
 AGENTS.md
-  Codex / agent implementation rules and guardrails.
+  Codex / agent 的實作規則與 guardrails。
 ```
 
-## Planned project layout
+## 專案結構
 
 ```text
 srt-clean/
@@ -99,9 +99,9 @@ srt-clean/
         └── README.md
 ```
 
-## Development setup
+## 開發環境
 
-Use Python 3.12.3+.
+使用 Python 3.12.3 以上版本。
 
 ```bash
 python3 -m venv .venv
@@ -110,7 +110,7 @@ python -m pip install -U pip setuptools wheel
 pip install -e ".[dev]"
 ```
 
-Validate:
+驗證方式：
 
 ```bash
 srt-clean --help
@@ -119,64 +119,64 @@ pytest
 ruff check .
 ```
 
-## Installation
+## 安裝
 
-Formal installation should use a dedicated venv:
+正式安裝應使用獨立的 venv：
 
 ```text
 ~/.venvs/srt-clean
 ```
 
-and create this wrapper:
+並建立這個 wrapper：
 
 ```text
 ~/bin/srt-clean
 ```
 
-Expected install command:
+安裝指令：
 
 ```bash
 bash scripts/install.sh
 ```
 
-After installation, users should not need to manually activate the venv.
+安裝完成後，使用者不需要手動 activate venv。
 
-Repository validation helper:
+repo 驗證輔助指令：
 
 ```bash
 bash scripts/check.sh
 ```
 
-## CLI examples
+## CLI 範例
 
-Clean Japanese ASR subtitles:
+清理日文 ASR 字幕：
 
 ```bash
 srt-clean --profile jp-adult-soft --level moderate sample.srt
 ```
 
-Generate report and decisions for review:
+產生 report 與 decisions 供 review：
 
 ```bash
 srt-clean --mode report --profile jp-adult-soft sample.srt
 srt-clean --mode apply --decisions sample.clean-decisions.yml sample.srt
 ```
 
-Clean English ASR subtitles:
+清理英文 ASR 字幕：
 
 ```bash
 srt-clean --profile en-adult-soft --level conservative sample.en.srt
 ```
 
-Inspect translated English subtitles:
+檢查翻譯後英文字幕：
 
 ```bash
 srt-clean --profile en-translation-soft --mode report sample.translated.en.srt
 ```
 
-## Relationship to other tools
+## 與其它工具的關係
 
-Recommended pipeline:
+建議流程：
 
 ```text
 audio / video
@@ -188,11 +188,11 @@ audio / video
   -> translated SRT
 ```
 
-`srt-clean` is independent from `transcribe-audio`, but it may later be called by `transcribe-audio` as an optional post-processing step.
+`srt-clean` 與 `transcribe-audio` 相互獨立，但未來可以作為 `transcribe-audio` 的可選後處理步驟。
 
-## P0 implementation status
+## P0 實作狀態
 
-Current implemented scope:
+目前已完成範圍：
 
 ```text
 Batch A

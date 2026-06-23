@@ -1,4 +1,4 @@
-# SDD-P0: Implementation Clarifications and Task Plan
+# SDD-P0：實作補充與任務計畫
 
 最後更新：2026-06-23
 
@@ -15,7 +15,7 @@ docs/SDD-srt-clean.md
 docs/SDD-ARCH-python-project-structure.md
 ```
 
-若本文件與上述文件衝突，P0 以本文件的 clarifications 為準，並應在後續整理時回填到主要 SDD。
+若本文件與上述文件衝突，P0 以本文件的補充說明為準，並應在後續整理時回填到主要 SDD。
 
 ## 2. P0 明確決策
 
@@ -145,44 +145,44 @@ P0 模式行為如下。
 | `clean` | yes | no | yes, `.cleaned.srt` | yes, `.clean-report.txt` | no | yes | no |
 | `apply` | no | yes | yes, `.cleaned.srt` | yes, `.apply-report.txt` | no | no | yes |
 
-Additional rules:
+補充規則：
 
 1. `apply` mode does not load profile by default.
-2. `apply` mode may read profile metadata from decisions for reporting only, but must not re-evaluate profile rules.
-3. `clean` mode must not write decisions.
-4. `report` mode must not write cleaned SRT.
-5. All modes must preserve the original input file.
+2. `apply` mode 可以為了 reporting 讀取 decisions 內的 profile metadata，但不得重新評估 profile rules。
+3. `clean` mode 不得寫出 decisions。
+4. `report` mode 不得寫出 cleaned SRT。
+5. 所有 modes 都必須保留原始輸入檔。
 
-## 4. Hash definitions
+## 4. Hash 定義
 
 ### 4.1 source_sha256
 
-`source_sha256` is computed from the exact input file bytes.
+`source_sha256` 必須以輸入檔的原始 bytes 計算。
 
-Algorithm:
+演算法：
 
 ```python
 hashlib.sha256(path.read_bytes()).hexdigest()
 ```
 
-Do not normalize line endings before source hash calculation.
+計算 `source_sha256` 前不得先正規化 line ending。
 
 ### 4.2 text_sha256
 
-`text_sha256` is computed from the original cue text lines joined with `\n` and encoded as UTF-8.
+`text_sha256` 必須以原始 cue text lines 用 `\n` 串接後，再以 UTF-8 編碼計算。
 
-Algorithm:
+演算法：
 
 ```python
 text_for_hash = "\n".join(cue.raw_text_lines)
 text_sha256 = hashlib.sha256(text_for_hash.encode("utf-8")).hexdigest()
 ```
 
-Do not use normalized text for `text_sha256`.
+`text_sha256` 不得使用 normalized text。
 
 ### 4.3 cue identity in decisions
 
-A decision entry must include:
+每一筆 decision 必須包含：
 
 ```yaml
 cue: 54
@@ -191,28 +191,28 @@ end: "00:25:50,050"
 text_sha256: "..."
 ```
 
-P0 apply validation requires all of these to match.
+P0 `apply` 驗證要求這些欄位全部一致。
 
-If any mismatch occurs, fail with exit code 5 and do not write cleaned output.
+若任一欄位不一致，必須以 exit code 5 失敗，且不得寫出 cleaned output。
 
 ## 5. Normalization order
 
-P0 must use deterministic normalization.
+P0 必須使用 deterministic normalization。
 
-For each cue text:
+對每個 cue text：
 
-1. Join raw text lines with a single space for `text`.
-2. Trim leading and trailing whitespace if `trim=true`.
-3. Apply `unicodedata.normalize("NFKC", text)` if `normalize_fullwidth=true`.
-4. Collapse consecutive whitespace to a single ASCII space if `collapse_spaces=true`.
-5. Apply lowercase if `lowercase=true`.
-6. Strip only outer punctuation if `strip_outer_punctuation=true`.
-7. Build `normalized_text` from the result.
-8. Build `compact_text` by removing whitespace and comparison-only punctuation.
+1. 將原始 `raw_text_lines` 用單一空白串接成 `text`。
+2. 若 `trim=true`，去除前後空白。
+3. 若 `normalize_fullwidth=true`，套用 `unicodedata.normalize("NFKC", text)`。
+4. 若 `collapse_spaces=true`，將連續空白壓成單一 ASCII space。
+5. 若 `lowercase=true`，套用 lowercase。
+6. 若 `strip_outer_punctuation=true`，只去除外層標點。
+7. 以結果建立 `normalized_text`。
+8. 透過移除空白與 comparison-only punctuation 建立 `compact_text`。
 
-`normalize_long_vowels=true` must not mutate `normalized_text` in P0.
+在 P0 中，`normalize_long_vowels=true` 不得直接修改 `normalized_text`。
 
-It only affects `compact_text` and regex comparison helpers by treating these marks as comparable extension marks:
+它只能影響 `compact_text` 與 regex comparison helper，把下列符號視為可比較的延長音記號：
 
 ```text
 ー
@@ -222,13 +222,13 @@ It only affects `compact_text` and regex comparison helpers by treating these ma
 -
 ```
 
-Do not change output subtitle text during normalization. Output text changes only through actions such as `compress`.
+normalization 階段不得改動輸出字幕文字。輸出文字只能透過 `compress` 等 action 改變。
 
 ## 6. Profile schema validation policy
 
-P0 must validate profiles strictly.
+P0 必須對 profile 做 strict validation。
 
-The following are profile schema errors and must exit with code 4:
+以下都屬於 profile schema error，且必須以 exit code 4 結束：
 
 1. Missing required top-level fields: `version`, `profile`, `rules`.
 2. Unsupported `version`.
@@ -242,37 +242,37 @@ The following are profile schema errors and must exit with code 4:
 10. Rule missing `match` or `action`.
 11. Invalid numeric values, such as negative duration or window size.
 
-P0 should treat unknown fields as errors, not warnings.
+P0 應將 unknown fields 視為 error，而不是 warning。
 
-Reason: typo-tolerance is dangerous in a rule engine that removes text.
+原因：會刪除文字的 rule engine 不適合容忍 typo。
 
 ## 7. Rule conflict resolution
 
-P0 must use deterministic conflict resolution.
+P0 必須使用 deterministic conflict resolution。
 
 ### 7.1 Evaluation phase
 
-1. Parse SRT into cues.
-2. Normalize cues.
-3. Evaluate protected rules first.
-4. Evaluate all other rules and produce candidate rule matches.
-5. Do not mutate cue text during rule evaluation.
+1. 將 SRT parse 成 cues。
+2. 對 cues 做 normalization。
+3. 先評估 protected rules。
+4. 再評估其它 rules，產生 candidate rule matches。
+5. rule evaluation 階段不得修改 cue text。
 
 ### 7.2 Merge phase
 
-For each cue:
+對每個 cue：
 
-1. If cue is protected, automatic `remove` is blocked.
-2. If cue has one or more allowed `remove` candidates, choose the highest-priority candidate as the primary decision.
-3. Store other matching rule IDs as secondary reasons in the report.
-4. If cue is marked for remove, do not apply `compress`.
-5. If cue is not removed and has one or more `compress` candidates, apply one compress action.
-6. If multiple compress candidates exist, apply the first rule order match.
-7. `report` candidates do not modify output.
+1. 若 cue 是 protected，automatic `remove` 必須被阻擋。
+2. 若 cue 有一個以上可套用的 `remove` candidate，選優先度最高者作為 primary decision。
+3. 其它命中的 rule ID 要以 secondary reasons 記錄在 report。
+4. 若 cue 已標記為 remove，不得再套用 `compress`。
+5. 若 cue 沒被 remove，且有一個以上 `compress` candidate，套用其中一個 `compress` action。
+6. 若有多個 `compress` candidate，套用最先命中的 rule order。
+7. `report` candidates 不得修改輸出。
 
 ### 7.3 Rule priority
 
-P0 priority order:
+P0 優先順序：
 
 ```text
 protected_text
@@ -289,7 +289,7 @@ density_window keep_first_n
 review report
 ```
 
-If implementation uses profile rule order, it must still enforce:
+若實作依賴 profile rule order，仍必須強制滿足：
 
 ```text
 protected blocks auto remove
@@ -300,31 +300,31 @@ review does not auto-apply
 
 ### 7.4 Density groups
 
-For `density_window`:
+針對 `density_window`：
 
-1. A cue may appear in multiple overlapping windows.
-2. The implementation must deduplicate removals.
-3. A cue removed by a stronger rule should not receive a separate density decision.
-4. Protected cues must not be removed by density rules.
-5. Report should include density group start/end and group size when available.
+1. 同一個 cue 可能出現在多個重疊 window 中。
+2. 實作必須對 removals 去重。
+3. 若 cue 已被更高優先度規則移除，不應再產生額外的 density decision。
+4. Protected cues 不得被 density rules 移除。
+5. 若可取得，report 應包含 density group 的 start / end 與 group size。
 
-## 8. repeated_phrase P0 algorithm
+## 8. repeated_phrase P0 演算法
 
-P0 repeated phrase detection must be simple and deterministic.
+P0 的 repeated phrase 偵測必須簡單且 deterministic。
 
-Supported P0 cases:
+P0 支援的情況：
 
 ### 8.1 Whole-text repeated substring
 
-Detect when the entire compact text is composed of the same substring repeated at least `min_repeats` times.
+偵測整段 compact text 是否由同一個 substring 重複至少 `min_repeats` 次組成。
 
-Example:
+範例：
 
 ```text
 気持ちいい気持ちいい気持ちいい気持ちいい
 ```
 
-compresses to:
+壓縮為：
 
 ```text
 気持ちいい
@@ -332,15 +332,15 @@ compresses to:
 
 ### 8.2 Separator-based repeated phrase
 
-Detect when text contains repeated phrases separated by whitespace or punctuation.
+偵測文字中是否有以空白或標點分隔的重複片語。
 
-Example:
+範例：
 
 ```text
 sorry, sorry, sorry, sorry
 ```
 
-compresses to:
+壓縮為：
 
 ```text
 sorry
@@ -348,31 +348,31 @@ sorry
 
 ### 8.3 Non-goals for P0 repeated_phrase
 
-P0 must not attempt Japanese morphological segmentation.
+P0 不得嘗試日文斷詞或形態分析。
 
-P0 must not infer semantic repetition.
+P0 不得自行推斷語意重複。
 
-P0 must not compress a phrase if doing so would produce empty text.
+若壓縮後會得到空字串，P0 不得進行 `compress`。
 
-If a cue also matches a stronger remove rule, remove wins.
+若同一 cue 同時命中更高優先度的 `remove` 規則，`remove` 優先。
 
 ## 9. en-translation-soft P0 boundary
 
-`en-translation-soft` is a single-file inspection profile in P0.
+`en-translation-soft` 在 P0 中是單檔 inspection profile。
 
-It may detect:
+它可以偵測：
 
 1. Adjacent duplicate translated text.
 2. Model meta-output such as `Translation:`, `Here is`, `Note:`, or `<think>`.
 3. Empty cue text.
 
-It must not claim to verify source/target cue count consistency in P0, because P0 only accepts one SRT input file.
+P0 只接受單一 SRT 輸入，因此不得宣稱能驗證 source / target cue 數量一致性。
 
-Cue count and timecode consistency between source and translated SRT belongs to `translate-srt` or a future dual-file validator.
+source 與 translated SRT 之間的 cue 數量與 timecode 一致性，屬於 `translate-srt` 或未來的雙檔 validator 範圍。
 
 ## 10. Report requirements clarified
 
-P0 report must include:
+P0 report 必須包含：
 
 ```text
 source
@@ -391,7 +391,7 @@ detail entries
 warnings
 ```
 
-Each detail entry must include:
+每一筆 detail entry 必須包含：
 
 ```text
 decision id
@@ -404,17 +404,17 @@ short text preview
 reason_zh
 ```
 
-For compressed entries, include before and after previews.
+`compress` 類型的 entry 必須包含 `before` 與 `after` 預覽。
 
-For protected entries, include `action=keep`.
+`protected` 類型的 entry 必須包含 `action=keep`。
 
-For blocked removals due to protected status, include `blocked_by_protected=true`.
+若自動 `remove` 因 `protected` 身分被阻擋，必須包含 `blocked_by_protected=true`。
 
 ## 11. Fixture policy
 
-Tests must use short synthetic SRT fixtures.
+tests 必須使用短小的 synthetic SRT fixtures。
 
-Do not commit:
+不得提交：
 
 1. Full real-world subtitles.
 2. Commercial transcript samples.
@@ -422,31 +422,31 @@ Do not commit:
 4. Video files.
 5. Large generated fixtures.
 
-Synthetic fixtures should be short and focused. One fixture should usually cover one behavior.
+synthetic fixtures 應短小且聚焦。通常一個 fixture 只覆蓋一種行為。
 
 ## 12. P0 task plan
 
-P0 should be implemented as multiple small tasks, not one large Codex run.
+P0 應拆成多個小 task 實作，不要一次用一個大型 Codex run 完成。
 
-Reason:
+原因：
 
-1. Parser and writer behavior can be tested independently.
-2. Profile schema errors need strict tests.
-3. Rule engine conflict resolution is easy to break if implemented together with CLI.
-4. Decisions/apply mode is a separate concern.
-5. Install script should be added after CLI is functional.
+1. Parser 與 writer 的行為可以獨立測試。
+2. Profile schema error 需要 strict tests。
+3. 若 rule engine conflict resolution 和 CLI 一起實作，較容易出錯。
+4. Decisions / apply mode 是獨立議題。
+5. install script 應在 CLI 可正常運作後再加入。
 
 ## 13. Task breakdown
 
-### Task 1: Project skeleton
+### Task 1：Project skeleton
 
-Goal:
+目標：
 
 ```text
-Create installable Python package with minimal CLI.
+建立可安裝的 Python package 與最小 CLI。
 ```
 
-Scope:
+範圍：
 
 1. `pyproject.toml`.
 2. `src/srt_clean/__init__.py`.
@@ -455,7 +455,7 @@ Scope:
 5. Basic `srt-clean --help`.
 6. Minimal tests wiring.
 
-Acceptance:
+驗收條件：
 
 ```bash
 python3 -m venv .venv
@@ -466,15 +466,15 @@ pytest
 ruff check .
 ```
 
-### Task 2: SRT parser and writer
+### Task 2：SRT parser and writer
 
-Goal:
+目標：
 
 ```text
-Parse and write SRT without cleaning.
+在不做清理的前提下完成 SRT parse 與 write。
 ```
 
-Scope:
+範圍：
 
 1. `parser.py`.
 2. `writer.py`.
@@ -483,22 +483,22 @@ Scope:
 5. BOM and CRLF support.
 6. cue re-numbering on write.
 
-Acceptance:
+驗收條件：
 
 1. Basic SRT parse test passes.
 2. Multi-line cue test passes.
 3. CRLF/BOM test passes.
 4. malformed timecode returns exit code 3 through CLI or parser-level error.
 
-### Task 3: Profile loader and built-in profiles
+### Task 3：Profile loader and built-in profiles
 
-Goal:
+目標：
 
 ```text
-Load strict YAML profiles and list built-in profiles.
+載入 strict YAML profiles，並列出 built-in profiles。
 ```
 
-Scope:
+範圍：
 
 1. `profile.py`.
 2. `profiles/jp-adult-soft.yml`.
@@ -507,7 +507,7 @@ Scope:
 5. `srt-clean --list-profiles`.
 6. `srt-clean --check --profile <name> input.srt`.
 
-Acceptance:
+驗收條件：
 
 1. Known profiles list correctly.
 2. Missing profile fails clearly.
@@ -515,35 +515,35 @@ Acceptance:
 4. Unknown rule type exits code 4.
 5. Regex compile error exits code 4.
 
-### Task 4: Normalization
+### Task 4：Normalization
 
-Goal:
+目標：
 
 ```text
-Generate normalized_text and compact_text deterministically.
+以 deterministic 方式產生 `normalized_text` 與 `compact_text`。
 ```
 
-Scope:
+範圍：
 
 1. `normalize.py`.
 2. profile-controlled normalization flags.
 3. tests for whitespace, NFKC, lowercase, punctuation stripping, compact text.
 
-Acceptance:
+驗收條件：
 
 1. Japanese normalization tests pass.
 2. English lowercase tests pass.
 3. Normalization does not mutate output text.
 
-### Task 5: Rule engine P0 base rules
+### Task 5：Rule engine P0 base rules
 
-Goal:
+目標：
 
 ```text
-Evaluate P0 rule types and produce rule matches without applying changes.
+評估 P0 rule types，並在不套用修改的情況下產生 rule matches。
 ```
 
-Scope:
+範圍：
 
 1. `rules.py`.
 2. rule types:
@@ -556,22 +556,22 @@ Scope:
    - `repeated_phrase`
 3. conflict-independent match generation.
 
-Acceptance:
+驗收條件：
 
 1. Japanese repeated kana matches remove candidate.
 2. Protected short phrase matches protected.
 3. English filler matches profile rule.
 4. Missing list reference fails during profile validation.
 
-### Task 6: Actions and conflict resolution
+### Task 6：Actions and conflict resolution
 
-Goal:
+目標：
 
 ```text
-Apply remove, keep, keep_first, keep_first_n, compress, and report deterministically.
+以 deterministic 方式套用 `remove`、`keep`、`keep_first`、`keep_first_n`、`compress` 與 `report`。
 ```
 
-Scope:
+範圍：
 
 1. `actions.py`.
 2. conflict resolution rules from this document.
@@ -579,7 +579,7 @@ Scope:
 4. remove wins over compress.
 5. compress only changes text, not timecode.
 
-Acceptance:
+驗收條件：
 
 1. Long `あああ...` removed.
 2. `気持ちいい気持ちいい...` compressed.
@@ -587,15 +587,15 @@ Acceptance:
 4. density rule removes only allowed cues.
 5. output cue indexes are continuous.
 
-### Task 7: Report mode and report output
+### Task 7：Report mode and report output
 
-Goal:
+目標：
 
 ```text
-Generate human-readable clean reports and decisions YAML.
+產生人類可讀的 clean report 與 decisions YAML。
 ```
 
-Scope:
+範圍：
 
 1. `report.py`.
 2. report summary.
@@ -604,22 +604,22 @@ Scope:
 5. source and cue hashes.
 6. `--mode report`.
 
-Acceptance:
+驗收條件：
 
 1. Report mode writes `.clean-report.txt`.
 2. Report mode writes `.clean-decisions.yml`.
 3. Report mode does not write `.cleaned.srt`.
 4. Existing outputs fail without `--force`.
 
-### Task 8: Clean mode
+### Task 8：Clean mode
 
-Goal:
+目標：
 
 ```text
-Run full parser -> profile -> normalize -> rules -> actions -> writer/report pipeline.
+執行完整的 `parser -> profile -> normalize -> rules -> actions -> writer/report` pipeline。
 ```
 
-Scope:
+範圍：
 
 1. `--mode clean`.
 2. `--level conservative|moderate|aggressive`.
@@ -627,7 +627,7 @@ Scope:
 4. `--report-output`.
 5. `--force`.
 
-Acceptance:
+驗收條件：
 
 1. Clean mode writes `.cleaned.srt`.
 2. Clean mode writes `.clean-report.txt`.
@@ -635,15 +635,15 @@ Acceptance:
 4. Review severity is not applied.
 5. Existing output fails without `--force`.
 
-### Task 9: Apply mode
+### Task 9：Apply mode
 
-Goal:
+目標：
 
 ```text
-Apply edited decisions file without re-running profile rules.
+在不重新執行 profile rules 的情況下，套用使用者修改後的 decisions 檔。
 ```
 
-Scope:
+範圍：
 
 1. `decisions.py` read path.
 2. source hash validation.
@@ -651,7 +651,7 @@ Scope:
 4. protected override reporting.
 5. `--mode apply`.
 
-Acceptance:
+驗收條件：
 
 1. Apply writes `.cleaned.srt`.
 2. Apply writes `.apply-report.txt`.
@@ -659,22 +659,22 @@ Acceptance:
 4. Protected override is allowed only from explicit decision and is reported.
 5. Apply mode does not require `--profile`.
 
-### Task 10: Install scripts
+### Task 10：Install scripts
 
-Goal:
+目標：
 
 ```text
-Install CLI into ~/.venvs/srt-clean and ~/bin/srt-clean.
+將 CLI 安裝到 `~/.venvs/srt-clean` 與 `~/bin/srt-clean`。
 ```
 
-Scope:
+範圍：
 
 1. `scripts/install.sh`.
 2. `scripts/uninstall.sh`.
 3. optional `bin/srt-clean` wrapper.
 4. smoke tests.
 
-Acceptance:
+驗收條件：
 
 ```bash
 bash scripts/install.sh
@@ -683,65 +683,65 @@ srt-clean --list-profiles
 bash scripts/uninstall.sh --yes
 ```
 
-### Task 11: Documentation pass
+### Task 11：Documentation pass
 
-Goal:
+目標：
 
 ```text
-Update README files to match implemented behavior.
+更新 README 類文件，使其與已實作行為一致。
 ```
 
-Scope:
+範圍：
 
 1. root `README.md`.
 2. `docs/README.md`.
 3. `profiles/README.md` if profile behavior changed.
 4. `AGENTS.md` if implementation rules changed.
 
-Acceptance:
+驗收條件：
 
 1. All documented commands exist or are clearly marked future.
 2. No P0 unsupported option is shown as implemented.
 3. P0 limitations are visible.
 
-## 14. Suggested execution strategy
+## 14. 建議執行策略
 
-Run Codex task-by-task.
+以 task-by-task 的方式執行 Codex。
 
-Do not ask Codex to implement all P0 at once.
+不要要求 Codex 一次完成全部 P0。
 
-Recommended prompt pattern:
+建議 prompt pattern：
 
 ```text
 Read AGENTS.md, docs/SDD-srt-clean.md, docs/SDD-ARCH-python-project-structure.md, and docs/SDD-P0-implementation-plan.md. Implement Task N only. Add tests for the task. Do not implement later tasks unless needed for task acceptance.
 ```
 
-After each task:
+每個 task 完成後：
 
 ```bash
 pytest
 ruff check .
 ```
 
-Commit after each task if tests pass.
+若 tests 通過，建議每個 task 完成後就 commit。
 
-## 15. Minimum useful milestone
+## 15. 最小可用里程碑
 
-The first useful milestone is after Task 8.
+第一個實用里程碑是在 Task 8 完成後。
 
-At that point, users can run:
+到那個階段，使用者可以執行：
 
 ```bash
 srt-clean --profile jp-adult-soft --level moderate sample.srt
 ```
 
-and get:
+並得到：
 
 ```text
 sample.cleaned.srt
 sample.clean-report.txt
 ```
 
-Task 9 adds manual partial review through decisions.
+Task 9 會加入透過 decisions 進行人工部分 review 的能力。
 
-Task 10 makes installation user-friendly.
+Task 10 會讓安裝流程對使用者更友善。
