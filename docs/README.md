@@ -15,6 +15,12 @@ SDD-ARCH-python-project-structure.md
 
 SDD-P0-implementation-plan.md
   P0 clarification and task plan. Defines final P0 decisions for ambiguous behavior, mode output matrix, hash rules, normalization order, conflict resolution, repeated_phrase algorithm, and task-by-task implementation plan.
+
+SDD-TESTING.md
+  Testing strategy. Defines where tests and fixtures live, how expected outputs are named, what Codex must test per task, and what the user needs to check.
+
+CODEX-RUNBOOK.md
+  User-facing runbook for telling Codex what to do. Contains batch prompts and the recommended minimal-human-intervention implementation plan.
 ```
 
 ## Reading order for implementation
@@ -23,9 +29,12 @@ Codex should read documents in this order:
 
 ```text
 1. ../AGENTS.md
-2. SDD-ARCH-python-project-structure.md
-3. SDD-srt-clean.md
-4. SDD-P0-implementation-plan.md
+2. ../README.md
+3. SDD-ARCH-python-project-structure.md
+4. SDD-srt-clean.md
+5. SDD-P0-implementation-plan.md
+6. SDD-TESTING.md
+7. CODEX-RUNBOOK.md
 ```
 
 If `SDD-P0-implementation-plan.md` clarifies a P0 behavior that is ambiguous in another document, use the P0 clarification for implementation.
@@ -48,6 +57,18 @@ When P0 task sequence, implementation clarifications, or acceptance criteria cha
 
 ```text
 docs/SDD-P0-implementation-plan.md
+```
+
+When testing strategy, fixture requirements, or expected output conventions change, update:
+
+```text
+docs/SDD-TESTING.md
+```
+
+When Codex execution prompts or implementation batches change, update:
+
+```text
+docs/CODEX-RUNBOOK.md
 ```
 
 Do not bury product requirements only in code comments or tests. If a behavior is intentional and user-visible, document it here.
@@ -86,6 +107,12 @@ P0 implementation planning specs use:
 
 ```text
 SDD-P0-<topic>.md
+```
+
+Operational runbooks use:
+
+```text
+<TOOL>-RUNBOOK.md
 ```
 
 Future change requests may use:
