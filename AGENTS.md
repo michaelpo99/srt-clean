@@ -34,7 +34,7 @@ Do not implement the core tool as a Bash orchestration script like `transcribe-a
 Use:
 
 ```text
-Python >= 3.11
+Python >= 3.12
 argparse
 PyYAML
 pytest

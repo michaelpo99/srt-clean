@@ -101,10 +101,10 @@ srt-clean/
 
 ## Development setup
 
-Use Python 3.11+.
+Use Python 3.12.3+.
 
 ```bash
-python3.11 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip setuptools wheel
 pip install -e ".[dev]"

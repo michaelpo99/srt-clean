@@ -74,7 +74,7 @@ scripts/install.sh
 最低版本：
 
 ```text
-Python >= 3.11
+Python >= 3.12
 ```
 
 原因：
@@ -185,7 +185,7 @@ name = "srt-clean"
 version = "0.1.0"
 description = "Rule-based SRT subtitle cleaner for ASR output"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
   "PyYAML>=6.0.1",
 ]
@@ -207,7 +207,7 @@ srt_clean = []
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 ```
 
 內建 profiles 第一版可以放在 repo-level `profiles/`，由 install script 複製或由 CLI 以相對路徑尋找。若要打包進 wheel，第二版可改放到：
@@ -225,7 +225,7 @@ P0 可先使用 repo-level `profiles/`，降低複雜度。
 開發者在 repo 內使用：
 
 ```bash
-python3.11 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip setuptools wheel
 pip install -e ".[dev]"
@@ -274,7 +274,7 @@ P0 不使用 Conda。
 `install.sh` 應：
 
 1. 找出 repo root。
-2. 檢查 Python 版本 >= 3.11。
+2. 檢查 Python 版本 >= 3.12。
 3. 建立或更新 `~/.venvs/srt-clean`。
 4. 安裝 package：
 
@@ -461,7 +461,7 @@ Codex 建議依下列順序實作：
 P0 完成時，以下指令應可成功：
 
 ```bash
-python3.11 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 srt-clean --help
