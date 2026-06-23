@@ -1,0 +1,67 @@
+version: 1
+profile: en-translation-soft
+description: Conservative inspection profile for translated English subtitles.
+
+defaults:
+  mode: report
+  level: conservative
+  preserve_original: true
+  output_suffix: ".cleaned"
+  report: true
+
+text_normalization:
+  trim: true
+  collapse_spaces: true
+  normalize_fullwidth: true
+  strip_outer_punctuation: true
+  normalize_long_vowels: false
+  normalize_repeated_marks: false
+  lowercase: true
+
+levels:
+  conservative:
+    apply_severity:
+      - safe
+      - review
+  moderate:
+    apply_severity:
+      - safe
+      - review
+  aggressive:
+    apply_severity:
+      - safe
+      - review
+
+protected:
+  text_regex:
+    - ".*"
+
+lists: {}
+
+rules:
+  - id: adjacent_duplicate_translation
+    severity: review
+    match:
+      type: adjacent_duplicate
+      max_chars: 80
+      max_gap_ms: 2000
+      normalized_text_equal: true
+    action:
+      type: report
+      report: true
+      zh_explanation: "翻譯後相鄰字幕完全相同，可能是模型重複輸出"
+
+  - id: model_meta_output
+    severity: safe
+    match:
+      type: regex_text
+      field: raw_text
+      regex:
+        - "(?i)^translation:"
+        - "(?i)^here is"
+        - "(?i)^note:"
+        - "(?i)<think>"
+    action:
+      type: remove
+      report: true
+      zh_explanation: "翻譯模型輸出的多餘說明文字"
