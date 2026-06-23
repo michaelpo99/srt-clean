@@ -11,6 +11,8 @@ def _rule_summary_label(decision: ResolvedDecision) -> str:
         return "removed"
     if decision.action == "compress":
         return "compressed"
+    if decision.action == "keep":
+        return "kept"
     if decision.severity == "protected":
         return "kept"
     return "review"
@@ -78,6 +80,8 @@ def build_report_text(
                     f"reason_zh={decision.reason_zh}",
                 ]
             )
+            if decision.metadata.get("user_override_protected"):
+                lines.append("user_override_protected=true")
         elif decision.action == "compress":
             lines.extend(
                 [
@@ -98,6 +102,20 @@ def build_report_text(
                 [
                     "",
                     "[KEEP-PROTECTED]",
+                    f"id={decision.decision_id}",
+                    f"cue={decision.cue_index}",
+                    f"time={decision.start} --> {decision.end}",
+                    f"rule={decision.rule_id}",
+                    f"severity={decision.severity}",
+                    f"text={decision.text}",
+                    f"reason_zh={decision.reason_zh}",
+                ]
+            )
+        elif decision.action == "keep":
+            lines.extend(
+                [
+                    "",
+                    "[KEEP]",
                     f"id={decision.decision_id}",
                     f"cue={decision.cue_index}",
                     f"time={decision.start} --> {decision.end}",

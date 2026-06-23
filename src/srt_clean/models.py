@@ -46,6 +46,10 @@ class ProfileError(SRTCleanError):
     exit_code = EXIT_PROFILE_ERROR
 
 
+class DecisionsConflictError(SRTCleanError):
+    exit_code = EXIT_DECISIONS_ERROR
+
+
 @dataclass(slots=True)
 class Cue:
     index: int
@@ -158,3 +162,20 @@ class ResolvedDecision:
 class PipelineResult:
     cleaned_cues: list[Cue]
     decisions: list[ResolvedDecision]
+
+
+@dataclass(slots=True)
+class LoadedDecision:
+    decision_id: str
+    cue_index: int
+    start: str
+    end: str
+    text_sha256: str
+    rule_id: str
+    severity: str
+    suggested_action: str
+    action: str
+    reason_zh: str
+    text: str | None = None
+    before: str | None = None
+    after: str | None = None

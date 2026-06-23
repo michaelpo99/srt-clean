@@ -42,3 +42,12 @@ def test_cli_requires_profile_for_clean_mode() -> None:
 
     assert result.returncode == 2
     assert "--profile is required" in result.stderr
+
+
+def test_cli_apply_mode_requires_decisions() -> None:
+    fixture = REPO_ROOT / "tests/fixtures/basic_multiline.input.srt"
+
+    result = run_cli("--mode", "apply", str(fixture))
+
+    assert result.returncode == 2
+    assert "--decisions is required" in result.stderr

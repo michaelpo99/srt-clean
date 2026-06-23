@@ -4,7 +4,7 @@ This directory contains installation and maintenance scripts for `srt-clean`.
 
 Scripts should be thin wrappers around Python packaging behavior. Do not put core application logic here.
 
-## Planned scripts
+## Scripts
 
 ```text
 install.sh
@@ -12,6 +12,9 @@ install.sh
 
 uninstall.sh
   Remove ~/bin/srt-clean and optionally remove ~/.venvs/srt-clean.
+
+check.sh
+  Run repo validation with pytest and ruff check .
 ```
 
 ## install.sh requirements
@@ -19,7 +22,7 @@ uninstall.sh
 The install script should:
 
 1. Detect the repository root.
-2. Check Python >= 3.11.
+2. Check Python >= 3.12.
 3. Create or reuse:
 
 ```text
@@ -61,6 +64,20 @@ The uninstall script should:
 1. Remove `~/bin/srt-clean`.
 2. Ask before deleting `~/.venvs/srt-clean`, unless `--yes` is provided.
 3. Never delete user SRT files, reports, decisions, or the repository.
+
+## check.sh requirements
+
+The check script should:
+
+1. Work from the repo root.
+2. Reuse or create `.venv`.
+3. Install `.[dev]`.
+4. Run:
+
+```bash
+pytest
+ruff check .
+```
 
 ## Shell style
 

@@ -5,8 +5,15 @@ import sys
 from pathlib import Path
 
 from .actions import resolve_actions
-from .decisions import build_decisions_document, write_decisions_file
-from .models import CLIError, EXIT_GENERAL_ERROR, EXIT_OK, ProfileError, SRTCleanError, SRTParseError
+from .decisions import (
+    apply_loaded_decisions,
+    build_decisions_document,
+    load_decisions_file,
+    parse_loaded_decisions,
+    validate_source_hash,
+    write_decisions_file,
+)
+from .models import CLIError, DecisionsConflictError, EXIT_GENERAL_ERROR, EXIT_OK, ProfileError, SRTCleanError, SRTParseError
 from .normalize import normalize_cues
 from .parser import parse_srt_file
 from .profile import list_builtin_profiles, load_profile
@@ -81,9 +88,7 @@ def ensure_output_paths(paths: list[Path], *, force: bool) -> None:
 
 
 def run_pipeline(args: argparse.Namespace) -> int:
-    if args.mode == "apply":
-        raise CLIError("--mode apply is not implemented yet")
-    if not args.profile:
+    if args.mode != "apply" and not args.profile:
         available = ", ".join(list_builtin_profiles())
         raise CLIError(f"--profile is required for P0. Available profiles: {available}")
     if not args.input:
@@ -95,42 +100,55 @@ def run_pipeline(args: argparse.Namespace) -> int:
     if input_path.suffix.lower() != ".srt":
         raise CLIError(f"input file must be .srt: {input_path}")
 
-    profile = load_profile(args.profile)
     cues = parse_srt_file(input_path)
-    normalized = normalize_cues(cues, profile.text_normalization)
-    matches = evaluate_rules(cues, normalized, profile)
-    result = resolve_actions(
-        cues=cues,
-        normalized_cues=normalized,
-        profile=profile,
-        matches=matches,
-        mode=args.mode,
-        level=args.level,
-    )
+    report_path = Path(args.report_output) if args.report_output else default_report_output_path(input_path, mode=args.mode)
 
-    report_path = Path(args.report_output) if args.report_output else default_report_output_path(
-        input_path, mode=args.mode
-    )
-    if args.mode == "clean":
+    if args.mode == "apply":
+        if not args.decisions:
+            raise CLIError("--decisions is required for --mode apply")
+        document = load_decisions_file(args.decisions)
+        validate_source_hash(input_path, document)
+        loaded = parse_loaded_decisions(document)
+        result = apply_loaded_decisions(cues=cues, decisions=loaded)
         clean_path = Path(args.output) if args.output else default_clean_output_path(input_path)
         ensure_output_paths([clean_path, report_path], force=args.force)
         write_srt_file(clean_path, result.cleaned_cues)
+        profile_name = document.get("profile", "n/a")
+        level = "n/a"
     else:
-        clean_path = None
-        decisions_path = default_decisions_output_path(input_path)
-        ensure_output_paths([report_path, decisions_path], force=args.force)
-        decisions_document = build_decisions_document(
-            input_path=input_path,
-            profile_name=profile.profile,
-            decisions=result.decisions,
+        profile = load_profile(args.profile)
+        normalized = normalize_cues(cues, profile.text_normalization)
+        matches = evaluate_rules(cues, normalized, profile)
+        result = resolve_actions(
+            cues=cues,
+            normalized_cues=normalized,
+            profile=profile,
+            matches=matches,
+            mode=args.mode,
+            level=args.level,
         )
-        write_decisions_file(decisions_path, decisions_document)
+        if args.mode == "clean":
+            clean_path = Path(args.output) if args.output else default_clean_output_path(input_path)
+            ensure_output_paths([clean_path, report_path], force=args.force)
+            write_srt_file(clean_path, result.cleaned_cues)
+        else:
+            clean_path = None
+            decisions_path = default_decisions_output_path(input_path)
+            ensure_output_paths([report_path, decisions_path], force=args.force)
+            decisions_document = build_decisions_document(
+                input_path=input_path,
+                profile_name=profile.profile,
+                decisions=result.decisions,
+            )
+            write_decisions_file(decisions_path, decisions_document)
+        profile_name = profile.profile
+        level = args.level
 
     report_text = build_report_text(
         source_path=input_path,
-        profile_name=profile.profile,
+        profile_name=profile_name,
         mode=args.mode,
-        level=args.level,
+        level=level,
         total_cues=len(cues),
         cleaned_cues=result.cleaned_cues,
         decisions=result.decisions,
@@ -168,7 +186,7 @@ def run(argv: list[str] | None = None) -> int:
 def main(argv: list[str] | None = None) -> int:
     try:
         return run(argv)
-    except (CLIError, SRTParseError, ProfileError) as exc:
+    except (CLIError, SRTParseError, ProfileError, DecisionsConflictError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return exc.exit_code
     except SRTCleanError as exc:

@@ -119,7 +119,7 @@ pytest
 ruff check .
 ```
 
-## Planned installation
+## Installation
 
 Formal installation should use a dedicated venv:
 
@@ -141,6 +141,12 @@ bash scripts/install.sh
 
 After installation, users should not need to manually activate the venv.
 
+Repository validation helper:
+
+```bash
+bash scripts/check.sh
+```
+
 ## CLI examples
 
 Clean Japanese ASR subtitles:
@@ -153,6 +159,7 @@ Generate report and decisions for review:
 
 ```bash
 srt-clean --mode report --profile jp-adult-soft sample.srt
+srt-clean --mode apply --decisions sample.clean-decisions.yml sample.srt
 ```
 
 Clean English ASR subtitles:
@@ -206,13 +213,11 @@ Batch C
   .clean-report.txt output
   .clean-decisions.yml output for report mode
   .cleaned.srt output for clean mode
-```
 
-Still pending:
-
-```text
 Batch D
   apply mode
   install scripts
-  documentation pass
+  scripts/check.sh
+  repo bin wrapper
+  documentation alignment
 ```
