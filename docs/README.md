@@ -1,8 +1,8 @@
 # docs/
 
-本目錄放置 `srt-clean` 的產品規格、架構規格、測試規格與 Codex 執行手冊。
+本目錄放置 `srt-clean` 的產品規格、架構規格、測試規格與 Codex / AI agent 執行手冊。
 
-Codex 實作前必須先閱讀這些文件，並以這些文件作為 source of truth。
+Codex 或其它 AI agent 實作前必須先閱讀這些文件，並以這些文件作為 source of truth。
 
 ## 文件清單
 
@@ -17,18 +17,18 @@ SDD-P0-implementation-plan.md
   P0 實作補強與 task plan。定義 P0 對模糊行為的最終決策、mode output matrix、hash 規則、normalization 順序、conflict resolution、repeated_phrase 演算法與分段實作計畫。
 
 SDD-TESTING.md
-  測試策略。定義 tests / fixtures 位置、expected output 命名、Codex 每個 task 必須測什麼，以及使用者需要看哪些結果。
+  測試策略。定義 tests / fixtures 位置、expected output 命名、agent 每個 task 必須測什麼，以及使用者需要看哪些結果。
 
 SDD-DOCS-STYLE.md
   文件語言與撰寫風格。定義文件以繁體中文為主，但 CLI、YAML、module、action、severity 等技術 token 保留英文。
 
 CODEX-RUNBOOK.md
-  給使用者複製貼給 Codex 的執行手冊。包含 batch prompts 與最小人工介入的實作計畫。
+  給 Codex / AI agent 直接讀取的執行手冊。包含 batch 指令、檢查要求與最小人工介入的實作計畫。使用者也可以複製其中 batch 指令給 Codex，但這不是唯一用途。
 ```
 
 ## 實作閱讀順序
 
-Codex 應依序閱讀：
+Codex 或其它 AI agent 應依序閱讀：
 
 ```text
 1. ../AGENTS.md
@@ -103,7 +103,7 @@ docs/SDD-P0-implementation-plan.md
 docs/SDD-TESTING.md
 ```
 
-Codex 執行 prompt 或 batch plan 變更時，更新：
+Codex / AI agent 執行指令或 batch plan 變更時，更新：
 
 ```text
 docs/CODEX-RUNBOOK.md
