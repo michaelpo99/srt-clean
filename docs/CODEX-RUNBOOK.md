@@ -8,7 +8,7 @@
 
 它不是只給使用者複製貼上用的 prompt 文件。若 agent 能讀取 repo，應直接依本文件規劃、分批實作、建立測試、執行檢查、修到通過，再回報結果。
 
-使用者也可以把本文件中的 batch 指令複製給 Codex；但主要定位是 agent-facing。
+使用者也可以把本文件中的短版啟動模板或 batch 指令複製給 Codex；但主要定位是 agent-facing。
 
 ## 2. Agent 必讀文件
 
@@ -48,7 +48,154 @@ bash scripts/check.sh
 
 如果檢查失敗，agent 必須先修正並重新執行。只有在所有檢查通過後，才可回報 batch 完成。
 
-## 4. 最小人工介入、但穩定的策略
+## 4. PR workflow 短版啟動模板
+
+本節是日常使用的短版 prompt。它刻意不重複每個 task 的細節，避免 prompt 與規格文件不同步。
+
+Agent 必須從 `docs/README.md`、`docs/CODEX-RUNBOOK.md` 與各 SDD 文件取得最新 scope 與 acceptance criteria。
+
+### 4.1 Batch A 短版 prompt
+
+```text
+請在 michaelpo99/srt-clean repo 依照 AGENTS.md、docs/README.md、docs/CODEX-RUNBOOK.md 執行。
+
+本次只做 Batch A，不要做後續 batch。
+
+請從最新 main 建立 branch：
+codex/batch-a
+
+請在該 branch 上依文件規定實作、建立 tests / fixtures，並執行：
+pytest
+ruff check .
+
+若失敗，修到通過再停止。
+
+完成後 commit、push branch，開 Draft PR 到 main。
+
+PR 說明包含：
+1. 完成內容
+2. 變更檔案
+3. pytest 結果
+4. ruff 結果
+5. 已知限制
+```
+
+### 4.2 Batch B 短版 prompt
+
+```text
+請在 michaelpo99/srt-clean repo 依照 AGENTS.md、docs/README.md、docs/CODEX-RUNBOOK.md 執行。
+
+本次只做 Batch B，不要做後續 batch。
+
+請從最新 main 建立 branch：
+codex/batch-b
+
+請在該 branch 上依文件規定實作、建立 tests / fixtures，並執行：
+pytest
+ruff check .
+
+若失敗，修到通過再停止。
+
+完成後 commit、push branch，開 Draft PR 到 main。
+
+PR 說明包含：
+1. 完成內容
+2. 變更檔案
+3. pytest 結果
+4. ruff 結果
+5. 已知限制
+```
+
+### 4.3 Batch C 短版 prompt
+
+```text
+請在 michaelpo99/srt-clean repo 依照 AGENTS.md、docs/README.md、docs/CODEX-RUNBOOK.md 執行。
+
+本次只做 Batch C，不要做後續 batch。
+
+請從最新 main 建立 branch：
+codex/batch-c
+
+請在該 branch 上依文件規定實作、建立 tests / fixtures，並執行：
+pytest
+ruff check .
+
+若失敗，修到通過再停止。
+
+完成後 commit、push branch，開 Draft PR 到 main。
+
+PR 說明包含：
+1. 完成內容
+2. 變更檔案
+3. pytest 結果
+4. ruff 結果
+5. 測試過的 example command，優先使用：
+   srt-clean --profile jp-adult-soft --level moderate <fixture>.srt
+6. 已知限制
+```
+
+### 4.4 Batch D 短版 prompt
+
+```text
+請在 michaelpo99/srt-clean repo 依照 AGENTS.md、docs/README.md、docs/CODEX-RUNBOOK.md 執行。
+
+本次只做 Batch D，不要做 future roadmap features。
+
+請從最新 main 建立 branch：
+codex/batch-d
+
+請在該 branch 上依文件規定實作、建立 tests / fixtures，並執行：
+pytest
+ruff check .
+
+如果 scripts/check.sh 已存在，也執行：
+bash scripts/check.sh
+
+若失敗，修到通過再停止。
+
+完成後 commit、push branch，開 Draft PR 到 main。
+
+PR 說明包含：
+1. 完成內容
+2. 變更檔案
+3. pytest 結果
+4. ruff 結果
+5. scripts/check.sh 結果，如果有執行
+6. install/uninstall smoke result，如果有執行
+7. 已知限制
+```
+
+### 4.5 Agent 無法開 PR 時
+
+若 agent 的環境無法開 PR，仍應完成：
+
+```text
+從最新 main 建立 branch
+在 branch 上實作
+執行 pytest 與 ruff check .
+commit
+push branch
+回報 branch name 與 commit SHA
+```
+
+使用者再手動開 PR。
+
+### 4.6 Branch 規則
+
+建議每個 batch 使用獨立 branch：
+
+```text
+codex/batch-a
+codex/batch-b
+codex/batch-c
+codex/batch-d
+```
+
+每個 batch 完成並 merge 後，下一個 batch 必須從最新 `main` 重新開 branch。
+
+不要在同一個 branch 連續做多個 batch，除非使用者明確要求。
+
+## 5. 最小人工介入、但穩定的策略
 
 不要一次實作 Task 1 到 Task 11。
 
@@ -89,7 +236,7 @@ scripts/check.sh 是否通過，如果已存在
 已知限制
 ```
 
-## 5. 為什麼不一次跑完
+## 6. 為什麼不一次跑完
 
 一次完成 Task 1-11 的風險：
 
@@ -103,7 +250,7 @@ apply mode 與 install script 會把問題混在一起，難以定位
 
 分 batch 的目的不是讓使用者懂 Python，而是避免錯誤堆疊。
 
-## 6. Batch A 指令
+## 7. Batch A 指令
 
 Agent 應在 Batch A 實作下列內容。
 
@@ -143,7 +290,7 @@ ruff check .
 5. 已知限制
 ```
 
-## 7. Batch B 指令
+## 8. Batch B 指令
 
 Batch A 通過後，agent 才能執行 Batch B。
 
@@ -188,7 +335,7 @@ ruff check .
 5. 已知限制
 ```
 
-## 8. Batch C 指令
+## 9. Batch C 指令
 
 Batch B 通過後，agent 才能執行 Batch C。
 
@@ -236,7 +383,7 @@ ruff check .
 6. 已知限制
 ```
 
-## 9. Batch D 指令
+## 10. Batch D 指令
 
 Batch C 通過，且使用者對 clean mode 方向滿意後，agent 才能執行 Batch D。
 
@@ -283,7 +430,7 @@ bash scripts/check.sh
 7. 已知限制
 ```
 
-## 10. 可選的快速方案
+## 11. 可選的快速方案
 
 若使用者明確要求減少互動次數，可用兩段式：
 
@@ -296,7 +443,7 @@ Fast Batch 2: Tasks 7-11
 
 除非使用者明確接受較高風險，不建議一次執行 Task 1-11。
 
-## 11. Batch C 後的人工檢查
+## 12. Batch C 後的人工檢查
 
 Batch C 完成後，使用者可以用一個 repo 外的私人真實 SRT 測試：
 
@@ -317,7 +464,7 @@ report 看得懂
 
 不要 commit 私人真實 SRT samples。
 
-## 12. 成功定義
+## 13. 成功定義
 
 最小可用成功點是 Batch C 通過。
 
