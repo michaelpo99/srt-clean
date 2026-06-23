@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "srt-clean"
+version = "0.1.0"
+description = "Rule-based SRT subtitle cleaner for ASR output"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "PyYAML>=6.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "ruff>=0.5",
+]
+
+[project.scripts]
+srt-clean = "srt_clean.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

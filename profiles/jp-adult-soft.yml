@@ -1,0 +1,204 @@
+version: 1
+profile: jp-adult-soft
+description: Clean low-information Japanese ASR subtitles from dense non-semantic vocalizations.
+
+defaults:
+  mode: clean
+  level: moderate
+  preserve_original: true
+  output_suffix: ".cleaned"
+  report: true
+
+text_normalization:
+  trim: true
+  collapse_spaces: true
+  normalize_fullwidth: true
+  strip_outer_punctuation: true
+  normalize_long_vowels: true
+  normalize_repeated_marks: true
+
+levels:
+  conservative:
+    apply_severity:
+      - safe
+  moderate:
+    apply_severity:
+      - safe
+      - likely_noise
+  aggressive:
+    apply_severity:
+      - safe
+      - likely_noise
+      - dense_low_info
+
+protected:
+  text_regex:
+    - "^(痛い|いたい)$"
+    - "^(やめて|やめないで|やだ|嫌だ)$"
+    - "^(待って|ちょっと待って)$"
+    - "^(大丈夫|大丈夫です)$"
+    - "^(ダメ|だめ|無理|むり)$"
+    - "^(苦しい|苦しくない)$"
+    - "^(気持ちいい|気持ちいいです)$"
+    - "^(お願いします|ごめんなさい|すいません)$"
+    - "^(入った|入らない|行く|いく)$"
+
+lists:
+  low_info_jp_vocal:
+    - "あ"
+    - "あっ"
+    - "あぁ"
+    - "あー"
+    - "ああ"
+    - "ん"
+    - "んっ"
+    - "んー"
+    - "んん"
+    - "う"
+    - "うっ"
+    - "うう"
+    - "はぁ"
+    - "はぁっ"
+    - "ふぅ"
+    - "おー"
+  likely_hallucination_jp:
+    - "おやすみなさい"
+    - "バイバイ"
+    - "byh"
+    - "ok"
+    - "ゴーゴー"
+    - "ゴーゴーゴーゴー"
+
+rules:
+  - id: pure_repeated_kana_long
+    severity: safe
+    description: 長串單一假名或延長音，通常是非語義聲音
+    match:
+      type: regex_text
+      regex:
+        - "^[あぁー〜…\\s]{6,}$"
+        - "^[んー〜…\\s]{4,}$"
+        - "^[うー〜…\\s]{4,}$"
+        - "^(はぁっ?){3,}$"
+    action:
+      type: remove
+      report: true
+      zh_explanation: "長串非語義聲音，字幕價值低，容易遮擋畫面"
+
+  - id: repeated_laughter_or_noise
+    severity: safe
+    description: 長串笑聲或明顯噪音字元
+    match:
+      type: regex_text
+      regex:
+        - "^(笑){5,}$"
+        - "^(母){4,}$"
+        - "^(父){4,}$"
+    action:
+      type: remove
+      report: true
+      zh_explanation: "疑似 ASR 幻覺或噪音字幕"
+
+  - id: low_info_vocal_short_duration
+    severity: likely_noise
+    description: 很短的低資訊發聲
+    match:
+      type: single_cue
+      max_duration_ms: 800
+      text:
+        in_list: low_info_jp_vocal
+    action:
+      type: remove
+      report: true
+      zh_explanation: "短促低資訊發聲"
+
+  - id: dense_low_info_vocal_window
+    severity: dense_low_info
+    description: 短時間內低資訊發聲過密
+    match:
+      type: density_window
+      window_ms: 8000
+      min_count: 3
+      text:
+        in_list: low_info_jp_vocal
+        max_chars: 8
+    action:
+      type: keep_first_n
+      count: 1
+      report: true
+      zh_explanation: "短時間內同類低資訊字幕過多，只保留少量代表性字幕"
+
+  - id: adjacent_duplicate_short
+    severity: safe
+    description: 相鄰短字幕完全重複
+    match:
+      type: adjacent_duplicate
+      max_chars: 12
+      max_gap_ms: 1500
+      normalized_text_equal: true
+    action:
+      type: keep_first
+      report: true
+      zh_explanation: "相鄰短字幕重複，保留第一筆"
+
+  - id: repeated_phrase_in_single_cue
+    severity: likely_noise
+    description: 同一句在單一 cue 中重複太多次
+    match:
+      type: repeated_phrase
+      min_repeats: 4
+      min_phrase_chars: 2
+      max_phrase_chars: 12
+      exclude_protected: true
+    action:
+      type: compress
+      max_repeats: 1
+      report: true
+      zh_explanation: "單一字幕內重複過多，壓縮成一次"
+
+  - id: known_likely_hallucination
+    severity: likely_noise
+    description: 常見 Whisper 幻覺詞
+    match:
+      type: text_in_list
+      list: likely_hallucination_jp
+      case_insensitive: true
+      max_chars: 20
+    action:
+      type: remove
+      report: true
+      zh_explanation: "常見 ASR 幻覺詞，通常不是實際對話"
+
+  - id: suspicious_numeric_or_ascii
+    severity: likely_noise
+    description: 日文字幕中出現孤立數字或 ASCII 片段
+    match:
+      type: regex_text
+      regex:
+        - "^[0-9]{5,}$"
+        - "^[A-Za-z0-9.]{2,8}$"
+    action:
+      type: remove
+      report: true
+      zh_explanation: "孤立數字或英數片段，疑似 ASR 誤判"
+
+  - id: ultra_short_cue
+    severity: review
+    description: 時間極短的 cue，可能需要合併或刪除
+    match:
+      type: single_cue
+      max_duration_ms: 250
+    action:
+      type: report
+      report: true
+      zh_explanation: "時間太短，可能是切分異常；第一版不自動刪"
+
+  - id: protected_semantic_short_phrase
+    severity: protected
+    description: 有語意短句，保留
+    match:
+      type: protected_text
+    action:
+      type: keep
+      report: true
+      zh_explanation: "可能有語意，不自動刪除"

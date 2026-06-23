@@ -187,10 +187,30 @@ audio / video
 
 ## P0 implementation status
 
-This repository currently contains the detailed specifications and scaffolding documentation. Implementation should follow:
+Current implemented scope:
 
 ```text
-1. AGENTS.md
-2. docs/SDD-ARCH-python-project-structure.md
-3. docs/SDD-srt-clean.md
+Batch A
+  Python package skeleton
+  minimal CLI help / --list-profiles / --check
+  SRT parser and writer
+  strict profile loader
+  deterministic normalization
+```
+
+Still pending:
+
+```text
+Batch B
+  rule engine
+  actions
+
+Batch C
+  report mode
+  clean mode
+
+Batch D
+  apply mode
+  install scripts
+  documentation pass
 ```

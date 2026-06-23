@@ -1,0 +1,115 @@
+version: 1
+profile: en-adult-soft
+description: Clean low-information English ASR subtitles with conservative protected phrases.
+
+defaults:
+  mode: clean
+  level: moderate
+  preserve_original: true
+  output_suffix: ".cleaned"
+  report: true
+
+text_normalization:
+  trim: true
+  collapse_spaces: true
+  normalize_fullwidth: true
+  strip_outer_punctuation: true
+  normalize_long_vowels: false
+  normalize_repeated_marks: false
+  lowercase: true
+
+levels:
+  conservative:
+    apply_severity:
+      - safe
+  moderate:
+    apply_severity:
+      - safe
+      - likely_noise
+  aggressive:
+    apply_severity:
+      - safe
+      - likely_noise
+      - dense_low_info
+
+protected:
+  text_regex:
+    - "^(no|stop|wait|don't|dont|please|hurt|okay|are you okay)$"
+    - "^(i can't|i cant|don't stop|dont stop)$"
+    - "^(it hurts|are you ok|are you okay)$"
+
+lists:
+  low_info_en_vocal:
+    - "ah"
+    - "ahh"
+    - "oh"
+    - "ohh"
+    - "uh"
+    - "um"
+    - "mm"
+    - "mmm"
+    - "hmm"
+    - "yeah"
+    - "yes"
+    - "oh yeah"
+
+rules:
+  - id: repeated_english_vocal_long
+    severity: safe
+    match:
+      type: regex_text
+      regex:
+        - "^(a+h+|o+h+|m+m+|u+h+)$"
+        - "^(ha){4,}$"
+    action:
+      type: remove
+      report: true
+      zh_explanation: "英文低資訊長音或笑聲"
+
+  - id: low_info_english_vocal_short_duration
+    severity: likely_noise
+    match:
+      type: single_cue
+      max_duration_ms: 900
+      text:
+        in_list: low_info_en_vocal
+    action:
+      type: remove
+      report: true
+      zh_explanation: "短促英文低資訊發聲"
+
+  - id: dense_low_info_english_short_cues
+    severity: dense_low_info
+    match:
+      type: density_window
+      window_ms: 5000
+      min_count: 4
+      text:
+        in_list: low_info_en_vocal
+        max_chars: 8
+    action:
+      type: keep_first_n
+      count: 2
+      report: true
+      zh_explanation: "短時間內英文低資訊 filler 過多"
+
+  - id: adjacent_duplicate_short_en
+    severity: safe
+    match:
+      type: adjacent_duplicate
+      max_chars: 16
+      max_gap_ms: 1500
+      normalized_text_equal: true
+    action:
+      type: keep_first
+      report: true
+      zh_explanation: "相鄰英文短字幕重複"
+
+  - id: protected_semantic_short_phrase_en
+    severity: protected
+    match:
+      type: protected_text
+    action:
+      type: keep
+      report: true
+      zh_explanation: "可能有語意的英文短句，保留"
