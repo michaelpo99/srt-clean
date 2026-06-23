@@ -1,127 +1,171 @@
 # docs/
 
-This directory contains product and architecture specifications for `srt-clean`.
+本目錄放置 `srt-clean` 的產品規格、架構規格、測試規格與 Codex 執行手冊。
 
-Codex should treat these documents as the source of truth before implementation.
+Codex 實作前必須先閱讀這些文件，並以這些文件作為 source of truth。
 
-## Files
+## 文件清單
 
 ```text
 SDD-srt-clean.md
-  Product specification. Defines CLI behavior, SRT parser behavior, rule types, actions, profiles, report format, decisions format, tests, exit codes, and roadmap.
+  產品規格。定義 CLI 行為、SRT parser、rule types、actions、profiles、report、decisions、tests、exit codes 與 roadmap。
 
 SDD-ARCH-python-project-structure.md
-  Architecture specification. Defines Python package layout, venv strategy, install scripts, development workflow, profile locations, README requirements, and P0 implementation order.
+  架構規格。定義 Python package layout、venv 策略、install scripts、開發流程、profile 位置、README 要求與 P0 實作順序。
 
 SDD-P0-implementation-plan.md
-  P0 clarification and task plan. Defines final P0 decisions for ambiguous behavior, mode output matrix, hash rules, normalization order, conflict resolution, repeated_phrase algorithm, and task-by-task implementation plan.
+  P0 實作補強與 task plan。定義 P0 對模糊行為的最終決策、mode output matrix、hash 規則、normalization 順序、conflict resolution、repeated_phrase 演算法與分段實作計畫。
 
 SDD-TESTING.md
-  Testing strategy. Defines where tests and fixtures live, how expected outputs are named, what Codex must test per task, and what the user needs to check.
+  測試策略。定義 tests / fixtures 位置、expected output 命名、Codex 每個 task 必須測什麼，以及使用者需要看哪些結果。
+
+SDD-DOCS-STYLE.md
+  文件語言與撰寫風格。定義文件以繁體中文為主，但 CLI、YAML、module、action、severity 等技術 token 保留英文。
 
 CODEX-RUNBOOK.md
-  User-facing runbook for telling Codex what to do. Contains batch prompts and the recommended minimal-human-intervention implementation plan.
+  給使用者複製貼給 Codex 的執行手冊。包含 batch prompts 與最小人工介入的實作計畫。
 ```
 
-## Reading order for implementation
+## 實作閱讀順序
 
-Codex should read documents in this order:
+Codex 應依序閱讀：
 
 ```text
 1. ../AGENTS.md
 2. ../README.md
-3. SDD-ARCH-python-project-structure.md
-4. SDD-srt-clean.md
-5. SDD-P0-implementation-plan.md
-6. SDD-TESTING.md
-7. CODEX-RUNBOOK.md
+3. SDD-DOCS-STYLE.md
+4. SDD-ARCH-python-project-structure.md
+5. SDD-srt-clean.md
+6. SDD-P0-implementation-plan.md
+7. SDD-TESTING.md
+8. CODEX-RUNBOOK.md
 ```
 
-If `SDD-P0-implementation-plan.md` clarifies a P0 behavior that is ambiguous in another document, use the P0 clarification for implementation.
+若 `SDD-P0-implementation-plan.md` 對 P0 行為做出明確補充，而其他文件較模糊，P0 實作以該補充為準。
 
-## Editing rules
+## 文件語言原則
 
-When product behavior changes, update:
+本 repo 文件以繁體中文為主。
+
+但以下 token 不翻譯：
+
+```text
+CLI option names
+YAML keys
+rule type names
+action names
+severity names
+Python module names
+file paths
+exit code labels
+test commands
+package names
+function / class names
+```
+
+範例：
+
+```text
+若輸出檔已存在且未指定 --force，CLI 必須失敗。
+`protected_text` 必須先於 `remove` 規則檢查。
+執行 pytest 與 ruff check . 必須通過。
+```
+
+詳細規則見：
+
+```text
+docs/SDD-DOCS-STYLE.md
+```
+
+## 修改規則
+
+產品行為變更時，更新：
 
 ```text
 docs/SDD-srt-clean.md
 ```
 
-When architecture, packaging, install flow, or directory layout changes, update:
+架構、packaging、install flow 或目錄 layout 變更時，更新：
 
 ```text
 docs/SDD-ARCH-python-project-structure.md
 ```
 
-When P0 task sequence, implementation clarifications, or acceptance criteria change, update:
+P0 task sequence、implementation clarifications 或 acceptance criteria 變更時，更新：
 
 ```text
 docs/SDD-P0-implementation-plan.md
 ```
 
-When testing strategy, fixture requirements, or expected output conventions change, update:
+測試策略、fixture 要求或 expected output 慣例變更時，更新：
 
 ```text
 docs/SDD-TESTING.md
 ```
 
-When Codex execution prompts or implementation batches change, update:
+Codex 執行 prompt 或 batch plan 變更時，更新：
 
 ```text
 docs/CODEX-RUNBOOK.md
 ```
 
-Do not bury product requirements only in code comments or tests. If a behavior is intentional and user-visible, document it here.
-
-## Document style
-
-Use precise implementation language.
-
-Prefer:
+文件語言或撰寫風格規則變更時，更新：
 
 ```text
-The CLI must write <stem>.cleaned.srt.
+docs/SDD-DOCS-STYLE.md
 ```
 
-Avoid vague wording such as:
+不要只把產品需求寫在 code comments 或 tests 裡。只要是 intentional 且 user-visible 的行為，都應該寫進 docs。
+
+## 文件寫法
+
+使用精確、可驗收的語句。
+
+推薦：
 
 ```text
-The CLI should probably make a cleaned file.
+CLI 必須寫出 <stem>.cleaned.srt。
 ```
 
-## Numbering convention
+不推薦：
 
-General specs use:
+```text
+CLI 應該大概會產生清理後檔案。
+```
+
+## 命名規則
+
+一般規格：
 
 ```text
 SDD-<topic>.md
 ```
 
-Architecture specs use:
+架構規格：
 
 ```text
 SDD-ARCH-<topic>.md
 ```
 
-P0 implementation planning specs use:
+P0 實作規格：
 
 ```text
 SDD-P0-<topic>.md
 ```
 
-Operational runbooks use:
+操作手冊：
 
 ```text
 <TOOL>-RUNBOOK.md
 ```
 
-Future change requests may use:
+未來 change request：
 
 ```text
 SDD-CR-###-<slug>.md
 ```
 
-Future bug fix specs may use:
+未來 bug fix 規格：
 
 ```text
 SDD-BUGFIX-###-<slug>.md
