@@ -37,7 +37,10 @@ def test_report_mode_writes_report_and_decisions_not_cleaned(tmp_path: Path) -> 
     report_text = report_path.read_text(encoding="utf-8")
     decisions_text = decisions_path.read_text(encoding="utf-8")
     assert "summary:" in report_text
+    assert "source_sha256=" in report_text
+    assert "warnings:" in report_text
     assert "[REMOVE]" in report_text
+    assert "action=remove" in report_text
     assert "source_sha256:" in decisions_text
 
 
@@ -64,3 +67,22 @@ def test_existing_report_outputs_fail_without_force(tmp_path: Path) -> None:
 
     assert result.returncode == 2
     assert "output already exists" in result.stderr
+
+
+def test_report_mode_rejects_output_option(tmp_path: Path) -> None:
+    input_path = tmp_path / "input.srt"
+    input_path.write_text((FIXTURES / "jp_batch_bc.input.srt").read_text(encoding="utf-8"), encoding="utf-8")
+
+    result = run_cli(
+        "--mode",
+        "report",
+        "--profile",
+        "jp-adult-soft",
+        "--output",
+        str(tmp_path / "bad.cleaned.srt"),
+        str(input_path),
+        cwd=tmp_path,
+    )
+
+    assert result.returncode == 2
+    assert "--output is not supported in --mode report" in result.stderr

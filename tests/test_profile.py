@@ -128,3 +128,45 @@ def test_missing_list_reference_exits_code_4() -> None:
 
     assert excinfo.value.exit_code == 4
     assert "references missing list" in str(excinfo.value)
+
+
+def test_remove_action_rejects_count_field() -> None:
+    data = {
+        "version": 1,
+        "profile": "invalid",
+        "rules": [
+            {
+                "id": "bad",
+                "severity": "safe",
+                "match": {"type": "protected_text"},
+                "action": {"type": "remove", "count": 1},
+            }
+        ],
+    }
+
+    with pytest.raises(ProfileError) as excinfo:
+        validate_profile_data(data, source_path=REPO_ROOT / "invalid.yml")
+
+    assert excinfo.value.exit_code == 4
+    assert "unknown fields: count" in str(excinfo.value)
+
+
+def test_report_action_rejects_max_repeats_field() -> None:
+    data = {
+        "version": 1,
+        "profile": "invalid",
+        "rules": [
+            {
+                "id": "bad",
+                "severity": "review",
+                "match": {"type": "protected_text"},
+                "action": {"type": "report", "max_repeats": 1},
+            }
+        ],
+    }
+
+    with pytest.raises(ProfileError) as excinfo:
+        validate_profile_data(data, source_path=REPO_ROOT / "invalid.yml")
+
+    assert excinfo.value.exit_code == 4
+    assert "unknown fields: max_repeats" in str(excinfo.value)

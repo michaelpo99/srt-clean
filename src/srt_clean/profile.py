@@ -222,6 +222,17 @@ def _validate_action(action_config: Any, *, rule_id: str) -> dict[str, Any]:
     action_type = mapping.get("type")
     if action_type not in ACTION_TYPES:
         raise ProfileError(f"rule {rule_id} uses unknown action.type: {action_type}")
+
+    allowed_by_type: dict[str, set[str]] = {
+        "remove": {"type", "report", "zh_explanation"},
+        "keep": {"type", "report", "zh_explanation"},
+        "keep_first": {"type", "report", "zh_explanation"},
+        "keep_first_n": {"type", "report", "zh_explanation", "count"},
+        "compress": {"type", "report", "zh_explanation", "max_repeats"},
+        "report": {"type", "report", "zh_explanation"},
+    }
+    _reject_unknown_fields(mapping, allowed=allowed_by_type[action_type], label=f"rule {rule_id} action")
+
     if "report" in mapping:
         _ensure_bool(mapping["report"], label=f"rule {rule_id} action.report")
     if action_type == "keep_first_n":
