@@ -203,6 +203,8 @@ Do not add commentary.
 
 對於第 5 與第 6 類模型輸出問題，script 可以先對單一 cue 做有限次重試；若重試後仍失敗，可以保留該 cue 原文並繼續處理其餘 cue，同時在 stderr 明確列出 fallback 的 cue index。
 
+若使用者中斷 script，例如 `Ctrl-C`，script 應主動呼叫 `ollama stop <model>`，避免模型持續佔用 GPU。
+
 錯誤訊息必須指出：
 
 1. 哪個檔案或參數有問題。

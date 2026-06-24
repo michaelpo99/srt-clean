@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import os
+import signal
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -142,6 +144,38 @@ if [[ "$1" == "run" ]]; then
     exit 1
   fi
   printf 'Di er ge ti shi\\n'
+  exit 0
+fi
+
+echo "unexpected ollama invocation: $*" >&2
+exit 1
+"""
+    path.write_text(script, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def write_interruptible_fake_ollama(path: Path) -> None:
+    script = """#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir="$(dirname "$0")/.ollama-state"
+mkdir -p "$state_dir"
+
+if [[ "$1" == "list" ]]; then
+  cat <<'EOF'
+NAME          ID              SIZE      MODIFIED
+qwen3:8b      fake-id         5 GB      now
+EOF
+  exit 0
+fi
+
+if [[ "$1" == "run" ]]; then
+  sleep 30
+  exit 0
+fi
+
+if [[ "$1" == "stop" ]]; then
+  printf '%s\n' "$2" >"$state_dir/stopped-model.txt"
   exit 0
 fi
 
@@ -373,6 +407,39 @@ def test_translate_script_rejects_mismatched_partial_output(tmp_path: Path) -> N
 
     assert result.returncode == 1
     assert "error: partial output does not match source cue order or timecodes:" in result.stderr
+
+
+def test_translate_script_stops_loaded_model_on_interrupt(tmp_path: Path) -> None:
+    input_path = tmp_path / FIXTURE_PATH.name
+    shutil.copyfile(FIXTURE_PATH, input_path)
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    write_interruptible_fake_ollama(fake_bin / "ollama")
+
+    env = os.environ.copy()
+    env["PATH"] = f"{fake_bin}:{env['PATH']}"
+    env["PYTHON_BIN"] = sys.executable
+
+    process = subprocess.Popen(
+        ["bash", str(SCRIPT_PATH), str(input_path), "zh-TW"],
+        cwd=tmp_path,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        preexec_fn=os.setsid,
+    )
+
+    time.sleep(0.5)
+    os.killpg(process.pid, signal.SIGINT)
+    stdout, stderr = process.communicate(timeout=10)
+
+    stopped_model_path = fake_bin / ".ollama-state" / "stopped-model.txt"
+
+    assert process.returncode == 130
+    assert stopped_model_path.exists()
+    assert stopped_model_path.read_text(encoding="utf-8").strip() == "qwen3:8b"
 
 
 def test_translate_script_requires_available_model(tmp_path: Path) -> None:

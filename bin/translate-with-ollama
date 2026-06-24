@@ -112,6 +112,12 @@ if ! ollama list | awk 'NR > 1 { print $1 }' | grep -Fx -- "$MODEL" >/dev/null; 
   exit 1
 fi
 
+stop_model_on_interrupt() {
+  ollama stop "$MODEL" >/dev/null 2>&1 || true
+}
+
+trap 'stop_model_on_interrupt; exit 130' INT TERM
+
 "$PYTHON_BIN" - "$REPO_ROOT" "$INPUT_PATH" "$TARGET_LANG" "$MODEL" "$SOURCE_LANG" <<'PY'
 from __future__ import annotations
 
@@ -141,6 +147,15 @@ def build_output_path(path: Path, target: str) -> Path:
 
 def build_partial_output_path(path: Path, target: str) -> Path:
     return path.with_name(f"{path.stem}.{target}.partial.srt")
+
+
+def stop_model() -> None:
+    subprocess.run(
+        ["ollama", "stop", model],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
 
 
 def load_partial_cues(path: Path, *, source_cues: list[Cue]) -> list[Cue]:
@@ -318,6 +333,11 @@ try:
         )
 
         partial_output_path.write_text(write_srt_text(translated_cues), encoding="utf-8")
+except KeyboardInterrupt:
+    stop_model()
+    if partial_output_path.exists():
+        print(f"warning: kept partial output at {partial_output_path}", file=sys.stderr)
+    raise SystemExit(130)
 except BaseException:
     if partial_output_path.exists():
         print(f"warning: kept partial output at {partial_output_path}", file=sys.stderr)
