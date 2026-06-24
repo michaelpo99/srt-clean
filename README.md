@@ -67,11 +67,12 @@ srt-clean/
 ├── AGENT.md
 ├── pyproject.toml
 ├── bin/
-│   └── srt-clean
+│   ├── srt-clean
+│   └── translate-with-ollama
 ├── scripts/
 │   ├── install.sh
 │   ├── uninstall.sh
-│   └── translate-with-ollama.sh
+│   └── check.sh
 ├── docs/
 │   ├── README.md
 │   ├── SDD-srt-clean.md

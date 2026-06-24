@@ -1,0 +1,284 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+MODEL="qwen3:8b"
+INPUT_PATH=""
+TARGET_LANG=""
+SOURCE_LANG=""
+POSITIONAL_ARGS=()
+
+usage() {
+  cat <<'EOF'
+usage:
+  bin/translate-with-ollama INPUT_SRT TARGET_LANG
+  bin/translate-with-ollama --input INPUT_SRT --target-lang TARGET_LANG [--source-lang LANG] [--model MODEL]
+
+Translate SRT cue text with Ollama while preserving cue numbering and timecodes.
+
+options:
+  --input PATH         input .srt file
+  --target-lang LANG   output language code, for example zh-TW
+  --source-lang LANG   optional source language hint
+  --model MODEL        Ollama model name, default: qwen3:8b
+  -h, --help           show this help message
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --input)
+      [[ $# -ge 2 ]] || { echo "error: --input requires a value" >&2; exit 2; }
+      INPUT_PATH="$2"
+      shift 2
+      ;;
+    --target-lang)
+      [[ $# -ge 2 ]] || { echo "error: --target-lang requires a value" >&2; exit 2; }
+      TARGET_LANG="$2"
+      shift 2
+      ;;
+    --source-lang)
+      [[ $# -ge 2 ]] || { echo "error: --source-lang requires a value" >&2; exit 2; }
+      SOURCE_LANG="$2"
+      shift 2
+      ;;
+    --model)
+      [[ $# -ge 2 ]] || { echo "error: --model requires a value" >&2; exit 2; }
+      MODEL="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --*)
+      echo "error: unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$INPUT_PATH" && ${#POSITIONAL_ARGS[@]} -ge 1 ]]; then
+  INPUT_PATH="${POSITIONAL_ARGS[0]}"
+fi
+
+if [[ -z "$TARGET_LANG" && ${#POSITIONAL_ARGS[@]} -ge 2 ]]; then
+  TARGET_LANG="${POSITIONAL_ARGS[1]}"
+fi
+
+if [[ ${#POSITIONAL_ARGS[@]} -gt 2 ]]; then
+  echo "error: too many positional arguments" >&2
+  usage >&2
+  exit 2
+fi
+
+if [[ -z "$INPUT_PATH" || -z "$TARGET_LANG" ]]; then
+  echo "error: input path and target language are required" >&2
+  usage >&2
+  exit 2
+fi
+
+if [[ ! -f "$INPUT_PATH" ]]; then
+  echo "error: input file not found: $INPUT_PATH" >&2
+  exit 1
+fi
+
+if [[ "${INPUT_PATH##*.}" != "srt" ]]; then
+  echo "error: input must be a .srt file: $INPUT_PATH" >&2
+  exit 1
+fi
+
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+  echo "error: python executable not found: $PYTHON_BIN" >&2
+  exit 1
+fi
+
+if ! command -v ollama >/dev/null 2>&1; then
+  echo "error: ollama CLI not found in PATH" >&2
+  echo "hint: install Ollama and verify with: ollama --version" >&2
+  exit 1
+fi
+
+if ! ollama list | awk 'NR > 1 { print $1 }' | grep -Fx -- "$MODEL" >/dev/null; then
+  echo "error: Ollama model is not available: $MODEL" >&2
+  echo "hint: pull it first with: ollama pull $MODEL" >&2
+  exit 1
+fi
+
+"$PYTHON_BIN" - "$REPO_ROOT" "$INPUT_PATH" "$TARGET_LANG" "$MODEL" "$SOURCE_LANG" <<'PY'
+from __future__ import annotations
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+repo_root = Path(sys.argv[1])
+input_path = Path(sys.argv[2]).resolve()
+target_lang = sys.argv[3]
+model = sys.argv[4]
+source_lang = sys.argv[5]
+
+sys.path.insert(0, str(repo_root / "src"))
+
+from srt_clean.models import Cue  # noqa: E402
+from srt_clean.parser import parse_srt_file, parse_srt_text  # noqa: E402
+from srt_clean.writer import write_srt_text  # noqa: E402
+
+MAX_TRANSLATION_ATTEMPTS = 3
+
+
+def build_output_path(path: Path, target: str) -> Path:
+    return path.with_name(f"{path.stem}.{target}.srt")
+
+
+def build_partial_output_path(path: Path, target: str) -> Path:
+    return path.with_name(f"{path.stem}.{target}.partial.srt")
+
+
+def build_prompt(text: str, *, target: str, source: str) -> str:
+    source_hint = f"Source language hint: {source}\n" if source else ""
+    return (
+        "You translate subtitle cue text.\n"
+        f"{source_hint}"
+        f"Target language: {target}\n"
+        "Rules:\n"
+        "- Translate only the subtitle text.\n"
+        "- Preserve natural line breaks when possible.\n"
+        "- Do not add cue numbers, timestamps, labels, markdown fences, or commentary.\n"
+        "- Return only the translated subtitle text.\n\n"
+        "Subtitle text:\n"
+        f"{text}"
+    )
+
+
+def build_retry_prompt(text: str, *, target: str, source: str, reason: str) -> str:
+    source_hint = f"Source language hint: {source}\n" if source else ""
+    return (
+        "Retry the subtitle translation.\n"
+        f"{source_hint}"
+        f"Target language: {target}\n"
+        f"Previous output issue: {reason}\n"
+        "Rules:\n"
+        "- Translate only the subtitle text.\n"
+        "- Preserve natural line breaks when possible.\n"
+        "- Do not add cue numbers, timestamps, labels, markdown fences, or commentary.\n"
+        "- Do not leave the response empty.\n"
+        "- Return only the translated subtitle text.\n\n"
+        "Subtitle text:\n"
+        f"{text}"
+    )
+
+
+def normalize_translation(text: str) -> list[str]:
+    candidate = text.strip()
+    if not candidate:
+        raise ValueError("empty output")
+
+    lines = [line.rstrip() for line in candidate.splitlines()]
+    if len(lines) >= 2 and lines[0].strip().startswith("```") and lines[-1].strip().startswith("```"):
+        lines = lines[1:-1]
+
+    cleaned = [line for line in lines if line.strip()]
+    if not cleaned:
+        raise ValueError("empty output")
+
+    if any(" --> " in line for line in cleaned):
+        raise ValueError("returned timecodes")
+
+    if any(re.fullmatch(r"\d+", line.strip()) for line in cleaned[:1]) and len(cleaned) > 1:
+        raise ValueError("returned cue numbering")
+
+    return cleaned
+
+
+def run_ollama(prompt: str, *, cue_index: int) -> str:
+    result = subprocess.run(
+        ["ollama", "run", model, prompt, "--nowordwrap", "--hidethinking"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip() or "unknown ollama error"
+        raise SystemExit(f"error: ollama failed for cue {cue_index}: {stderr}")
+    return result.stdout
+
+
+def translate_text(text: str, *, cue_index: int) -> list[str]:
+    prompt = build_prompt(text, target=target_lang, source=source_lang)
+    last_issue = "unknown validation issue"
+    for attempt in range(1, MAX_TRANSLATION_ATTEMPTS + 1):
+        raw_output = run_ollama(prompt, cue_index=cue_index)
+        try:
+            return normalize_translation(raw_output)
+        except ValueError as exc:
+            last_issue = str(exc)
+            if attempt >= MAX_TRANSLATION_ATTEMPTS:
+                break
+            print(
+                (
+                    f"warning: retrying cue {cue_index} after model produced {last_issue} "
+                    f"(attempt {attempt}/{MAX_TRANSLATION_ATTEMPTS})"
+                ),
+                file=sys.stderr,
+            )
+            prompt = build_retry_prompt(
+                text,
+                target=target_lang,
+                source=source_lang,
+                reason=last_issue,
+            )
+
+    raise SystemExit(
+        f"error: model returned {last_issue} for cue {cue_index} "
+        f"after {MAX_TRANSLATION_ATTEMPTS} attempts"
+    )
+
+
+cues = parse_srt_file(input_path)
+output_path = build_output_path(input_path, target_lang)
+partial_output_path = build_partial_output_path(input_path, target_lang)
+if output_path.exists():
+    raise SystemExit(f"error: output file already exists: {output_path}")
+
+translated_cues: list[Cue] = []
+try:
+    for cue in cues:
+        source_text_lines = cue.raw_text_lines if cue.raw_text_lines else [cue.text]
+        source_text = "\n".join(source_text_lines).strip()
+        if not source_text:
+            translated_lines = source_text_lines
+        else:
+            translated_lines = translate_text(source_text, cue_index=cue.index)
+
+        translated_cues.append(
+            Cue(
+                index=cue.index,
+                start_ms=cue.start_ms,
+                end_ms=cue.end_ms,
+                text="\n".join(translated_lines),
+                raw_text_lines=translated_lines,
+                raw_block=cue.raw_block,
+            )
+        )
+
+        partial_output_path.write_text(write_srt_text(translated_cues), encoding="utf-8")
+except BaseException:
+    if partial_output_path.exists():
+        print(f"warning: kept partial output at {partial_output_path}", file=sys.stderr)
+    raise
+
+output_text = write_srt_text(translated_cues)
+parse_srt_text(output_text)
+partial_output_path.write_text(output_text, encoding="utf-8")
+partial_output_path.replace(output_path)
+print(f"translated {len(translated_cues)} cue(s) to {output_path}")
+PY

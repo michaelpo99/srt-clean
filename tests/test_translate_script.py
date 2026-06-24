@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCRIPT_PATH = REPO_ROOT / "scripts/translate-with-ollama.sh"
+SCRIPT_PATH = REPO_ROOT / "bin/translate-with-ollama"
 FIXTURE_PATH = REPO_ROOT / "tests/fixtures/translate_script.input.srt"
 
 
@@ -33,6 +33,82 @@ if [[ "$1" == "run" ]]; then
   else
     printf 'Di er ge ti shi\\n'
   fi
+  exit 0
+fi
+
+echo "unexpected ollama invocation: $*" >&2
+exit 1
+"""
+    path.write_text(script, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def write_retrying_fake_ollama(path: Path) -> None:
+    script = """#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir="$(dirname "$0")/.ollama-state"
+mkdir -p "$state_dir"
+
+if [[ "$1" == "list" ]]; then
+  cat <<'EOF'
+NAME          ID              SIZE      MODIFIED
+qwen3:8b      fake-id         5 GB      now
+EOF
+  exit 0
+fi
+
+if [[ "$1" == "run" ]]; then
+  prompt="${3:-}"
+  hello_counter_file="$state_dir/hello.count"
+  second_counter_file="$state_dir/second.count"
+
+  if [[ "$prompt" == *"Hello"* ]]; then
+    count=0
+    if [[ -f "$hello_counter_file" ]]; then
+      count="$(cat "$hello_counter_file")"
+    fi
+    count=$((count + 1))
+    printf '%s' "$count" >"$hello_counter_file"
+    if [[ "$count" -eq 1 ]]; then
+      printf '   \\n'
+    else
+      printf 'Ni hao\\nshi jie\\n'
+    fi
+    exit 0
+  fi
+
+  count=0
+  if [[ -f "$second_counter_file" ]]; then
+    count="$(cat "$second_counter_file")"
+  fi
+  count=$((count + 1))
+  printf '%s' "$count" >"$second_counter_file"
+  printf 'Di er ge ti shi\\n'
+  exit 0
+fi
+
+echo "unexpected ollama invocation: $*" >&2
+exit 1
+"""
+    path.write_text(script, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def write_empty_fake_ollama(path: Path) -> None:
+    script = """#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$1" == "list" ]]; then
+  cat <<'EOF'
+NAME          ID              SIZE      MODIFIED
+qwen3:8b      fake-id         5 GB      now
+EOF
+  exit 0
+fi
+
+if [[ "$1" == "run" ]]; then
+  printf '   \\n'
   exit 0
 fi
 
@@ -72,11 +148,127 @@ def test_translate_script_creates_language_suffix_output(tmp_path: Path) -> None
     assert "translated 2 cue(s)" in result.stdout
 
     output_path = tmp_path / "translate_script.input.zh-TW.srt"
+    partial_path = tmp_path / "translate_script.input.zh-TW.partial.srt"
     assert output_path.exists()
+    assert not partial_path.exists()
     assert (
         output_path.read_text(encoding="utf-8")
         == "1\n00:00:01,000 --> 00:00:02,500\nNi hao\nshi jie\n\n"
         "2\n00:00:03,000 --> 00:00:04,000\nDi er ge ti shi\n"
+    )
+
+
+def test_translate_script_retries_empty_output_and_succeeds(tmp_path: Path) -> None:
+    input_path = tmp_path / FIXTURE_PATH.name
+    shutil.copyfile(FIXTURE_PATH, input_path)
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    write_retrying_fake_ollama(fake_bin / "ollama")
+
+    env = os.environ.copy()
+    env["PATH"] = f"{fake_bin}:{env['PATH']}"
+    env["PYTHON_BIN"] = sys.executable
+
+    result = subprocess.run(
+        ["bash", str(SCRIPT_PATH), str(input_path), "zh-TW"],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 0
+    assert "retrying cue 1 after model produced empty output (attempt 1/3)" in result.stderr
+    assert "translated 2 cue(s)" in result.stdout
+
+
+def test_translate_script_fails_after_repeated_empty_output(tmp_path: Path) -> None:
+    input_path = tmp_path / FIXTURE_PATH.name
+    shutil.copyfile(FIXTURE_PATH, input_path)
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    write_empty_fake_ollama(fake_bin / "ollama")
+
+    env = os.environ.copy()
+    env["PATH"] = f"{fake_bin}:{env['PATH']}"
+    env["PYTHON_BIN"] = sys.executable
+
+    result = subprocess.run(
+        ["bash", str(SCRIPT_PATH), str(input_path), "zh-TW"],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 1
+    assert "retrying cue 1 after model produced empty output (attempt 1/3)" in result.stderr
+    assert "retrying cue 1 after model produced empty output (attempt 2/3)" in result.stderr
+    assert "error: model returned empty output for cue 1 after 3 attempts" in result.stderr
+    assert "warning: kept partial output at" not in result.stderr
+
+
+def test_translate_script_keeps_partial_output_when_later_cue_fails(tmp_path: Path) -> None:
+    input_path = tmp_path / FIXTURE_PATH.name
+    shutil.copyfile(FIXTURE_PATH, input_path)
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    script = """#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$1" == "list" ]]; then
+  cat <<'EOF'
+NAME          ID              SIZE      MODIFIED
+qwen3:8b      fake-id         5 GB      now
+EOF
+  exit 0
+fi
+
+if [[ "$1" == "run" ]]; then
+  prompt="${3:-}"
+  if [[ "$prompt" == *"Hello"* ]]; then
+    printf 'Ni hao\\nshi jie\\n'
+  else
+    printf '   \\n'
+  fi
+  exit 0
+fi
+
+echo "unexpected ollama invocation: $*" >&2
+exit 1
+"""
+    ollama_path = fake_bin / "ollama"
+    ollama_path.write_text(script, encoding="utf-8")
+    ollama_path.chmod(0o755)
+
+    env = os.environ.copy()
+    env["PATH"] = f"{fake_bin}:{env['PATH']}"
+    env["PYTHON_BIN"] = sys.executable
+
+    result = subprocess.run(
+        ["bash", str(SCRIPT_PATH), str(input_path), "zh-TW"],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=False,
+        env=env,
+    )
+
+    partial_path = tmp_path / "translate_script.input.zh-TW.partial.srt"
+    output_path = tmp_path / "translate_script.input.zh-TW.srt"
+
+    assert result.returncode == 1
+    assert "warning: kept partial output at" in result.stderr
+    assert partial_path.exists()
+    assert not output_path.exists()
+    assert (
+        partial_path.read_text(encoding="utf-8")
+        == "1\n00:00:01,000 --> 00:00:02,500\nNi hao\nshi jie\n"
     )
 
 

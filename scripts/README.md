@@ -13,9 +13,6 @@ install.sh
 uninstall.sh
   Remove ~/bin/srt-clean, remove ~/bin/translate-with-ollama, and optionally remove ~/.venvs/srt-clean.
 
-translate-with-ollama.sh
-  Translate SRT cue text through Ollama while preserving cue numbering and timecodes.
-
 check.sh
   Run repo validation with pytest and ruff check .
 ```
@@ -75,17 +72,6 @@ The uninstall script should:
 2. Remove `~/bin/translate-with-ollama`.
 3. Ask before deleting `~/.venvs/srt-clean`, unless `--yes` is provided.
 4. Never delete user SRT files, reports, decisions, or the repository.
-
-## translate-with-ollama.sh requirements
-
-The translation script should:
-
-1. Require an input `.srt` path and a target language code.
-2. Default to the `qwen3:8b` model.
-3. Check that `ollama` is installed and that the requested model is available.
-4. Preserve cue numbering and timecodes by translating cue text only.
-5. Write output to `<stem>.<target-lang>.srt`.
-6. Refuse to overwrite an existing output file.
 
 ## check.sh requirements
 

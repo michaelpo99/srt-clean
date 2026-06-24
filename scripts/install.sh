@@ -60,7 +60,7 @@ chmod +x "$WRAPPER_PATH"
 cat >"$TRANSLATE_WRAPPER_PATH" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-exec bash "${REPO_ROOT}/scripts/translate-with-ollama.sh" "\$@"
+exec bash "${REPO_ROOT}/bin/translate-with-ollama" "\$@"
 EOF
 chmod +x "$TRANSLATE_WRAPPER_PATH"
 

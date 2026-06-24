@@ -1,6 +1,6 @@
 # bin/
 
-This directory may contain local wrapper scripts for repository-based development.
+This directory contains repo-local executable entrypoints for repository-based development.
 
 The primary installed CLI entry point should come from `pyproject.toml`:
 
@@ -9,13 +9,16 @@ The primary installed CLI entry point should come from `pyproject.toml`:
 srt-clean = "srt_clean.cli:main"
 ```
 
-## Planned wrapper
+## Local executables
 
 ```text
 bin/srt-clean
+bin/translate-with-ollama
 ```
 
-This wrapper is optional for P0. If implemented, it should only forward arguments to the Python package entry point.
+`bin/srt-clean` is an optional wrapper. If implemented, it should only forward arguments to the Python package entry point.
+
+`bin/translate-with-ollama` is the repo-local subtitle translation helper. It may contain shell-side orchestration for invoking `ollama`, but it must not contain `srt-clean` rule engine logic.
 
 Suggested behavior:
 
@@ -31,9 +34,7 @@ exec "$PYTHON_BIN" -m srt_clean.cli "$@"
 
 ## Rules
 
-Do not put rule engine logic in shell scripts.
-
-Do not duplicate CLI argument parsing in shell.
+Do not put `srt-clean` rule engine logic in shell scripts.
 
 Do not make this wrapper depend on user-specific absolute paths.
 

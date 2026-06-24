@@ -25,7 +25,7 @@
 1. 新增一個 shell script，例如：
 
 ```text
-scripts/translate-with-ollama.sh
+bin/translate-with-ollama
 ```
 
 2. script 必須接受：
@@ -61,7 +61,7 @@ optional model name，預設 `qwen3:8b`
 此 CR 不只要求 repo 內存在：
 
 ```text
-scripts/translate-with-ollama.sh
+bin/translate-with-ollama
 ```
 
 也要求正式安裝後提供：
@@ -81,7 +81,7 @@ scripts/translate-with-ollama.sh
 建議 CLI 介面：
 
 ```bash
-bash scripts/translate-with-ollama.sh input.srt zh-TW
+bash bin/translate-with-ollama input.srt zh-TW
 ```
 
 正式安裝後，也應支援：
@@ -93,7 +93,7 @@ translate-with-ollama input.srt zh-TW
 支援完整參數形式：
 
 ```bash
-bash scripts/translate-with-ollama.sh \
+bash bin/translate-with-ollama \
   --input input.srt \
   --target-lang zh-TW \
   --source-lang ja \
@@ -140,6 +140,7 @@ episode.cleaned.zh-TW.srt
 2. 在移除後的 basename 後面附加 `.<target-lang>.srt`。
 3. 不得覆蓋原始檔。
 4. 若輸出檔已存在且未指定未來 `--force`，script 必須失敗。
+5. script 可以在同目錄寫出 `<stem>.<target-lang>.partial.srt` 作為進度暫存檔；成功時應轉成正式輸出，失敗時可保留供檢查。
 
 ## 7. 執行前置條件
 
@@ -200,6 +201,8 @@ Do not add commentary.
 6. 模型回應無法重建為合法 SRT。
 7. 目標輸出檔已存在。
 
+對於第 5 與第 6 類模型輸出問題，script 可以先對單一 cue 做有限次重試；若重試後仍失敗，才以非 0 exit code 結束。
+
 錯誤訊息必須指出：
 
 1. 哪個檔案或參數有問題。
@@ -213,13 +216,13 @@ Do not add commentary.
 
 ```bash
 srt-clean --profile en-translation-soft --mode clean input.srt
-bash scripts/translate-with-ollama.sh input.cleaned.srt zh-TW
+bash bin/translate-with-ollama input.cleaned.srt zh-TW
 ```
 
 或：
 
 ```bash
-bash scripts/translate-with-ollama.sh input.srt zh-TW
+bash bin/translate-with-ollama input.srt zh-TW
 srt-clean --profile en-translation-soft --mode report input.zh-TW.srt
 ```
 
@@ -254,7 +257,7 @@ scripts/README.md
 1. 存在可執行 script：
 
 ```text
-scripts/translate-with-ollama.sh
+bin/translate-with-ollama
 ```
 
 且正式安裝後存在：
@@ -266,7 +269,7 @@ scripts/translate-with-ollama.sh
 2. 執行：
 
 ```bash
-bash scripts/translate-with-ollama.sh sample.srt zh-TW
+bash bin/translate-with-ollama sample.srt zh-TW
 ```
 
 必須產生：

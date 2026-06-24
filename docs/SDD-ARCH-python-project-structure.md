@@ -133,11 +133,12 @@ srt-clean/
 ├── README.md
 ├── pyproject.toml
 ├── bin/
-│   └── srt-clean
+│   ├── srt-clean
+│   └── translate-with-ollama
 ├── scripts/
 │   ├── install.sh
 │   ├── uninstall.sh
-│   └── translate-with-ollama.sh
+│   └── check.sh
 ├── docs/
 │   ├── SDD-srt-clean.md
 │   └── SDD-ARCH-python-project-structure.md
