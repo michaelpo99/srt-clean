@@ -143,6 +143,28 @@ def build_partial_output_path(path: Path, target: str) -> Path:
     return path.with_name(f"{path.stem}.{target}.partial.srt")
 
 
+def load_partial_cues(path: Path, *, source_cues: list[Cue]) -> list[Cue]:
+    partial_cues = parse_srt_file(path)
+    if len(partial_cues) > len(source_cues):
+        raise SystemExit(
+            f"error: partial output has more cues than source input: {path}"
+        )
+
+    for offset, partial_cue in enumerate(partial_cues):
+        source_cue = source_cues[offset]
+        if (
+            partial_cue.index != source_cue.index
+            or partial_cue.start_ms != source_cue.start_ms
+            or partial_cue.end_ms != source_cue.end_ms
+        ):
+            raise SystemExit(
+                "error: partial output does not match source cue order or timecodes: "
+                f"{path}"
+            )
+
+    return partial_cues
+
+
 def build_prompt(text: str, *, target: str, source: str) -> str:
     source_hint = f"Source language hint: {source}\n" if source else ""
     return (
@@ -250,14 +272,39 @@ if output_path.exists():
     raise SystemExit(f"error: output file already exists: {output_path}")
 
 translated_cues: list[Cue] = []
+if partial_output_path.exists():
+    translated_cues = load_partial_cues(partial_output_path, source_cues=cues)
+    if translated_cues:
+        print(
+            (
+                f"warning: resuming from partial output at {partial_output_path} "
+                f"starting after cue {translated_cues[-1].index}"
+            ),
+            file=sys.stderr,
+        )
+    else:
+        print(f"warning: resuming from empty partial output at {partial_output_path}", file=sys.stderr)
+
+fallback_cue_indexes: list[int] = []
 try:
-    for cue in cues:
+    for cue in cues[len(translated_cues) :]:
         source_text_lines = cue.raw_text_lines if cue.raw_text_lines else [cue.text]
         source_text = "\n".join(source_text_lines).strip()
         if not source_text:
             translated_lines = source_text_lines
         else:
-            translated_lines = translate_text(source_text, cue_index=cue.index)
+            try:
+                translated_lines = translate_text(source_text, cue_index=cue.index)
+            except SystemExit as exc:
+                print(
+                    (
+                        f"warning: using source text for cue {cue.index} after translation failed: "
+                        f"{exc}"
+                    ),
+                    file=sys.stderr,
+                )
+                translated_lines = source_text_lines
+                fallback_cue_indexes.append(cue.index)
 
         translated_cues.append(
             Cue(
@@ -281,4 +328,10 @@ parse_srt_text(output_text)
 partial_output_path.write_text(output_text, encoding="utf-8")
 partial_output_path.replace(output_path)
 print(f"translated {len(translated_cues)} cue(s) to {output_path}")
+if fallback_cue_indexes:
+    print(
+        "warning: kept source text for cue(s): "
+        + ", ".join(str(cue_index) for cue_index in fallback_cue_indexes),
+        file=sys.stderr,
+    )
 PY

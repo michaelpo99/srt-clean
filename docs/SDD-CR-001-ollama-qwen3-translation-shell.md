@@ -140,7 +140,7 @@ episode.cleaned.zh-TW.srt
 2. 在移除後的 basename 後面附加 `.<target-lang>.srt`。
 3. 不得覆蓋原始檔。
 4. 若輸出檔已存在且未指定未來 `--force`，script 必須失敗。
-5. script 可以在同目錄寫出 `<stem>.<target-lang>.partial.srt` 作為進度暫存檔；成功時應轉成正式輸出，失敗時可保留供檢查。
+5. script 可以在同目錄寫出 `<stem>.<target-lang>.partial.srt` 作為進度暫存檔；成功時應轉成正式輸出，失敗時可保留供檢查。若同名 partial 檔已存在，script 應預設驗證後續跑，而不是無條件從頭覆寫。
 
 ## 7. 執行前置條件
 
@@ -201,7 +201,7 @@ Do not add commentary.
 6. 模型回應無法重建為合法 SRT。
 7. 目標輸出檔已存在。
 
-對於第 5 與第 6 類模型輸出問題，script 可以先對單一 cue 做有限次重試；若重試後仍失敗，才以非 0 exit code 結束。
+對於第 5 與第 6 類模型輸出問題，script 可以先對單一 cue 做有限次重試；若重試後仍失敗，可以保留該 cue 原文並繼續處理其餘 cue，同時在 stderr 明確列出 fallback 的 cue index。
 
 錯誤訊息必須指出：
 
